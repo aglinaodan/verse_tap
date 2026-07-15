@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-charcoal font-default">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SermonNotes</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="esv_version.js"></script>
+  <style>
+    /* ── CSS CUSTOM PROPERTIES (Themes) ── */
+    :root {
+      --accent:       #6366f1;
+      --accent-light: #818cf8;
+      --accent-dark:  #4f46e5;
+      --bg-base:      #1a1a2e;
+      --bg-card:      #16213e;
+      --bg-nav:       #0f3460;
+      --text-primary: #e2e8f0;
+      --text-muted:   #94a3b8;
+      --border:       #334155;
+      --danger:       #ef4444;
+      --success:      #22c55e;
+      --warn:         #f59e0b;
+      --base-font:    16px;
+    }
+
+    /* Theme: Charcoal / Dark (default) */
+    .theme-charcoal {
+      --accent:       #6366f1;
+      --accent-light: #818cf8;
+      --accent-dark:  #4f46e5;
+      --bg-base:      #111827;
+      --bg-card:      #1f2937;
+      --bg-nav:       #111827;
+      --text-primary: #f1f5f9;
+      --text-muted:   #9ca3af;
+      --border:       #374151;
+    }
+
+    /* Theme: Deep Navy */
+    .theme-navy {
+      --accent:       #38bdf8;
+      --accent-light: #7dd3fc;
+      --accent-dark:  #0284c7;
+      --bg-base:      #0a1628;
+      --bg-card:      #0f2547;
+      --bg-nav:       #060d1a;
+      --text-primary: #e0f2fe;
+      --text-muted:   #7dd3fc;
+      --border:       #1e3a5f;
+    }
+
+    /* Theme: Warm Amber */
+    .theme-amber {
+      --accent:       #d97706;
+      --accent-light: #fbbf24;
+      --accent-dark:  #b45309;
+      --bg-base:      #1c1008;
+      --bg-card:      #2d1a0a;
+      --bg-nav:       #100a04;
+      --text-primary: #fef3c7;
+      --text-muted:   #d97706;
+      --border:       #78350f;
+    }
+
+    /* Theme: Emerald */
+    .theme-emerald {
+      --accent:       #10b981;
+      --accent-light: #34d399;
+      --accent-dark:  #059669;
+      --bg-base:      #061a12;
+      --bg-card:      #0a2b1e;
+      --bg-nav:       #030f0a;
+      --text-primary: #d1fae5;
+      --text-muted:   #6ee7b7;
+      --border:       #065f46;
+    }
+
+    /* Font sizes */
+    .font-small   { font-size: 14px; }
+    .font-default { font-size: 16px; }
+    .font-large   { font-size: 18px; }
+
+    /* ── Base resets ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: var(--base-font, 16px);
+      overflow: hidden;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Layouts ── */
+    #app { display: flex; flex-direction: column; height: 100%; }
+    #top-nav {
+      background: var(--bg-nav);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1rem; height: 56px; flex-shrink: 0; z-index: 50;
+      position: relative;
+    }
+    #content-area { flex: 1; overflow: hidden; position: relative; }
+    .view { position: absolute; inset: 0; overflow-y: auto; display: none; padding: 1.25rem; }
+    .view.active { display: block; }
+
+    /* ── Sidenav ── */
+    #sidenav-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+    #sidenav-overlay.open { opacity: 1; pointer-events: all; }
+    #sidenav {
+      position: fixed; top: 0; left: 0; height: 100%;
+      width: 300px; max-width: 85vw;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      z-index: 110;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+    }
+    #sidenav.open { transform: translateX(0); }
+    #sidenav-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1rem; height: 56px; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-nav);
+    }
+    #sidenav-body { flex: 1; overflow-y: auto; padding: 1rem 0; }
+    #sidenav-footer {
+      flex-shrink: 0; padding: 1rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    /* ── Sidenav nav items ── */
+    .nav-item {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.65rem 1.25rem; cursor: pointer;
+      color: var(--text-muted); font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+    .nav-item svg { flex-shrink: 0; }
+
+    /* ── Accordion (Bible Explorer) ── */
+    .accordion-toggle { width: 100%; justify-content: space-between; }
+    .accordion-toggle .chevron { transition: transform 0.2s; }
+    .accordion-toggle.expanded .chevron { transform: rotate(180deg); }
+    #bible-accordion-body {
+      overflow: hidden; max-height: 0;
+      transition: max-height 0.32s cubic-bezier(.4,0,.2,1);
+    }
+    #bible-accordion-body.open { max-height: 70vh; overflow-y: auto; }
+
+    /* ── Testament columns ── */
+    .testament-section { padding: 0.5rem 1.25rem 0.5rem 2rem; }
+    .testament-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent); margin-bottom: 0.4rem; }
+    .book-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.15rem; }
+    .book-link {
+      padding: 0.3rem 0.4rem; border-radius: 4px; font-size: 0.8rem;
+      color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .book-link:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+
+    /* ── Theme picker ── */
+    .theme-dot {
+      width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    .theme-dot:hover { transform: scale(1.15); }
+    .theme-dot.selected { border-color: var(--text-primary); }
+
+    /* ── Font size segment ── */
+    .font-seg-btn {
+      flex: 1; padding: 0.3rem 0.4rem; text-align: center;
+      font-size: 0.8rem; cursor: pointer; border-radius: 4px;
+      color: var(--text-muted); transition: background 0.15s, color 0.15s;
+    }
+    .font-seg-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+    .font-seg-btn.active { background: var(--accent); color: #fff; }
+
+    /* ── Cards (Notes) ── */
+    .note-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.1rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      cursor: default; position: relative;
+    }
+    .note-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .note-card .card-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .note-card .card-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem; }
+    .note-card .tag {
+      background: rgba(99,102,241,0.18); color: var(--accent-light);
+      border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.72rem; font-weight: 500;
+    }
+    .note-card .card-content { font-size: 0.85rem; color: var(--text-muted);
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .note-card .card-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .note-card .card-actions { display: flex; gap: 0.4rem; margin-top: 0.75rem; justify-content: flex-end; }
+
+    /* ── Icon buttons ── */
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+      transition: background 0.15s, color 0.15s; color: var(--text-muted);
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    .icon-btn.danger:hover { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .icon-btn.success:hover { background: rgba(34,197,94,0.15); color: var(--success); }
+
+    /* ── FAB ── */
+    #fab {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.45);
+      cursor: pointer; transition: background 0.15s, transform 0.15s;
+      z-index: 40; border: none;
+    }
+    #fab:hover { background: var(--accent-dark); transform: scale(1.07); }
+
+    /* ── Modal ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+      z-index: 200; display: flex; align-items: flex-end;
+      animation: fadeIn 0.15s ease;
+    }
+    @media (min-width: 640px) {
+      .modal-backdrop { align-items: center; justify-content: center; }
+    }
+    .modal-box {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px 16px 0 0; width: 100%; max-width: 640px;
+      max-height: 90vh; display: flex; flex-direction: column;
+      animation: slideUp 0.22s ease;
+    }
+    @media (min-width: 640px) {
+      .modal-box { border-radius: 16px; }
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .modal-body { flex: 1; overflow-y: auto; padding: 1.25rem; }
+    .modal-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+    /* ── Form elements ── */
+    .sn-input, .sn-textarea {
+      width: 100%; background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.6rem 0.85rem;
+      color: var(--text-primary); font-size: 0.9rem;
+      transition: border-color 0.15s; outline: none;
+      font-family: inherit;
+    }
+    .sn-input:focus, .sn-textarea:focus { border-color: var(--accent); }
+    .sn-textarea { resize: vertical; min-height: 140px; }
+    label.form-label { font-size: 0.78rem; color: var(--text-muted);
+      display: block; margin-bottom: 0.35rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.55rem 1.1rem; border-radius: 8px; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-ghost { background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text-primary); border-color: var(--text-muted); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { opacity: 0.88; }
+
+    /* ── Search bar ── */
+    #search-bar {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.45rem 0.8rem;
+      flex: 1; max-width: 400px;
+    }
+    #search-input {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--text-primary); font-size: 0.88rem;
+    }
+    #search-input::placeholder { color: var(--text-muted); }
+
+    /* ── Bible Reader ── */
+    #bible-view { padding: 0; }
+    #bible-top-bar {
+      position: sticky; top: 0; background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem; z-index: 10;
+      display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+    }
+    .sn-select {
+      background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-primary);
+      padding: 0.4rem 0.65rem; font-size: 0.85rem; cursor: pointer;
+      outline: none;
+    }
+    #bible-content { padding: 1.25rem; }
+    .verse-row {
+      display: flex; gap: 0.5rem; padding: 0.35rem 0;
+      border-radius: 6px; transition: background 0.12s; cursor: pointer;
+    }
+    .verse-row:hover { background: rgba(255,255,255,0.04); }
+    .verse-num { font-size: 0.72rem; font-weight: 700; color: var(--accent);
+      min-width: 1.8rem; padding-top: 0.22rem; text-align: right; flex-shrink: 0; }
+    .verse-text { font-size: 0.95rem; color: var(--text-primary); line-height: 1.7; }
+    .verse-row.highlighted { background: rgba(99,102,241,0.18); }
+
+    /* ── Recycle Bin ── */
+    .recycle-card { border-color: rgba(239,68,68,0.3); }
+    .recycle-card:hover { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+    .days-badge {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      background: rgba(239,68,68,0.15); color: var(--danger);
+      border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.72rem; font-weight: 600;
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 1rem; padding: 4rem 1rem;
+      color: var(--text-muted); text-align: center;
+    }
+    .empty-state svg { opacity: 0.35; }
+
+    /* ── Toast ── */
+    #toast-container {
+      position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%);
+      z-index: 999; display: flex; flex-direction: column; gap: 0.5rem;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--bg-nav); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.65rem 1.1rem;
+      color: var(--text-primary); font-size: 0.85rem;
+      animation: slideUp 0.22s ease, fadeOut 0.3s ease 2.7s forwards;
+      white-space: nowrap; pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+
+    /* ── Verse action popover ── */
+    #verse-popover {
+      position: fixed; z-index: 300;
+      background: var(--bg-nav); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.5rem;
+      display: none; flex-direction: column; gap: 0.25rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 160px;
+    }
+    #verse-popover.visible { display: flex; }
+    .popover-btn {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 0.7rem; border-radius: 6px; font-size: 0.83rem;
+      cursor: pointer; color: var(--text-muted); transition: all 0.12s;
+    }
+    .popover-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+
+    /* ── Chip input ── */
+    .chip-wrap {
+      display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+      background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.4rem 0.6rem; min-height: 42px;
+      cursor: text;
+    }
+    .chip-wrap:focus-within { border-color: var(--accent); }
+    .chip-tag {
+      background: rgba(99,102,241,0.25); color: var(--accent-light);
+      border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.78rem;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .chip-tag .remove { cursor: pointer; line-height: 1; opacity: 0.7; }
+    .chip-tag .remove:hover { opacity: 1; }
+    #tag-input { flex: 1; min-width: 80px; background: none; border: none;
+      outline: none; color: var(--text-primary); font-size: 0.88rem; }
+
+    /* ── View header ── */
+    .view-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;
+    }
+    .view-title { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
+
+    /* ── Notes grid ── */
+    #notes-grid {
+      display: grid; gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+
+    /* ── Confirm dialog ── */
+    #confirm-dialog {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 400; display: none; align-items: center; justify-content: center;
+    }
+    #confirm-dialog.visible { display: flex; }
+    #confirm-box {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.5rem; max-width: 340px; width: 90%;
+      text-align: center;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+    /* ── Responsive nav search ── */
+    @media (max-width: 480px) {
+      #search-bar { max-width: none; }
+      #nav-title { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SIDENAV OVERLAY
+════════════════════════════════════════════════════════════════ -->
+<div id="sidenav-overlay" onclick="closeSidenav()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SIDENAV DRAWER
+════════════════════════════════════════════════════════════════ -->
+<nav id="sidenav" aria-label="Side navigation">
+  <!-- Header -->
+  <div id="sidenav-header">
+    <div style="display:flex;align-items:center;gap:0.6rem;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="var(--accent)">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span style="font-weight:700;font-size:1rem;color:var(--text-primary)">SermonNotes</span>
+    </div>
+    <button class="icon-btn" onclick="closeSidenav()" aria-label="Close menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div id="sidenav-body">
+
+    <!-- Main Notes link -->
+    <div class="nav-item active" id="nav-notes-link" onclick="showView('main'); closeSidenav()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/>
+      </svg>
+      My Sermon Notes
+    </div>
+
+    <!-- Bible Explorer Accordion -->
+    <div>
+      <div class="nav-item accordion-toggle" id="bible-accordion-toggle" onclick="toggleBibleAccordion()" style="cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:0.65rem;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Bible
+        </div>
+        <svg class="chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <polyline points="6,9 12,15 18,9"/>
+        </svg>
+      </div>
+
+      <!-- Accordion Body -->
+      <div id="bible-accordion-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;padding:0.5rem 1rem 0.75rem;">
+          <!-- OT Column -->
+          <div>
+            <div class="testament-title" style="padding-left:0.25rem;">Old Testament</div>
+            <div id="ot-book-list"></div>
+          </div>
+          <!-- NT Column -->
+          <div>
+            <div class="testament-title" style="padding-left:0.25rem;">New Testament</div>
+            <div id="nt-book-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recycle Bin -->
+    <div class="nav-item" id="nav-recycle-link" onclick="showView('recycle'); closeSidenav()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+      </svg>
+      Recycle Bin
+      <span id="recycle-badge" style="margin-left:auto;background:var(--danger);color:#fff;border-radius:999px;padding:0.05rem 0.5rem;font-size:0.7rem;display:none;"></span>
+    </div>
+
+  </div><!-- /sidenav-body -->
+
+  <!-- Footer: Appearance Panel -->
+  <div id="sidenav-footer">
+    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);font-weight:700;margin-bottom:0.65rem;">Appearance</div>
+
+    <!-- Theme dots -->
+    <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.85rem;">
+      <div class="theme-dot selected" id="dot-charcoal"
+           style="background:linear-gradient(135deg,#111827 50%,#6366f1 50%);"
+           onclick="setTheme('charcoal')" title="Charcoal Dark"></div>
+      <div class="theme-dot" id="dot-navy"
+           style="background:linear-gradient(135deg,#0a1628 50%,#38bdf8 50%);"
+           onclick="setTheme('navy')" title="Deep Navy"></div>
+      <div class="theme-dot" id="dot-amber"
+           style="background:linear-gradient(135deg,#1c1008 50%,#d97706 50%);"
+           onclick="setTheme('amber')" title="Warm Amber"></div>
+      <div class="theme-dot" id="dot-emerald"
+           style="background:linear-gradient(135deg,#061a12 50%,#10b981 50%);"
+           onclick="setTheme('emerald')" title="Emerald"></div>
+      <span style="font-size:0.76rem;color:var(--text-muted);margin-left:0.25rem;" id="theme-label">Charcoal</span>
+    </div>
+
+    <!-- Font size segment -->
+    <div style="display:flex;gap:0.25rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:0.2rem;">
+      <div class="font-seg-btn" id="fs-small" onclick="setFontSize('small')" title="Small text">-A</div>
+      <div class="font-seg-btn active" id="fs-default" onclick="setFontSize('default')" title="Default text">A</div>
+      <div class="font-seg-btn" id="fs-large" onclick="setFontSize('large')" title="Large text">A+</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP SHELL
+════════════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Top Nav -->
+  <header id="top-nav">
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <button class="icon-btn" id="hamburger-btn" onclick="openSidenav()" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <span id="nav-title" style="font-weight:700;font-size:1rem;color:var(--text-primary)">SermonNotes</span>
+    </div>
+    <div style="flex:1;display:flex;justify-content:center;padding:0 0.75rem;">
+      <div id="search-bar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search notes…" oninput="filterNotes()" />
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.35rem;">
+      <span id="nav-translation" style="font-size:0.75rem;font-weight:700;color:var(--accent);
+        background:rgba(99,102,241,0.15);padding:0.2rem 0.55rem;border-radius:6px;cursor:pointer;"
+        onclick="showView('bible')" title="Bible Reader">ESV</span>
+    </div>
+  </header>
+
+  <!-- Content Area -->
+  <div id="content-area">
+
+    <!-- ─── MAIN VIEW ─── -->
+    <div id="view-main" class="view active">
+      <div class="view-header">
+        <div class="view-title">My Notes</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);" id="notes-count">0 notes</div>
+      </div>
+      <div id="notes-grid"></div>
+      <div id="main-empty" class="empty-state" style="display:none;">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14,2 14,8 20,8"/>
+        </svg>
+        <div>
+          <div style="font-weight:600;font-size:1rem;color:var(--text-primary);margin-bottom:0.25rem;">No notes yet</div>
+          <div style="font-size:0.85rem;">Tap the + button to create your first sermon note.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── BIBLE VIEW ─── -->
+    <div id="view-bible" class="view" style="padding:0;">
+      <div id="bible-top-bar">
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;flex:1;">
+          <select id="bible-book-select" class="sn-select" onchange="onBibleBookChange()"></select>
+          <select id="bible-chapter-select" class="sn-select" onchange="renderBibleChapter()"></select>
+          <select id="bible-translation-select" class="sn-select" onchange="onTranslationChange()"></select>
+        </div>
+        <button class="btn btn-ghost" style="font-size:0.78rem;padding:0.35rem 0.7rem;" onclick="showView('main')">
+          ← Back
+        </button>
+      </div>
+      <div id="bible-content"></div>
+    </div>
+
+    <!-- ─── RECYCLE BIN VIEW ─── -->
+    <div id="view-recycle" class="view">
+      <div class="view-header">
+        <div class="view-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:0.35rem;">
+            <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Recycle Bin
+        </div>
+        <button class="btn btn-danger" id="empty-recycle-btn" onclick="confirmEmptyRecycleBin()" style="font-size:0.78rem;padding:0.35rem 0.8rem;display:none;">
+          Empty Bin
+        </button>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">
+        Notes are permanently deleted after 30 days.
+      </div>
+      <div id="recycle-grid" style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));"></div>
+      <div id="recycle-empty" class="empty-state" style="display:none;">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+        </svg>
+        <div>
+          <div style="font-weight:600;font-size:1rem;color:var(--text-primary);margin-bottom:0.25rem;">Recycle Bin is empty</div>
+          <div style="font-size:0.85rem;">Deleted notes will appear here for 30 days.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FAB
+════════════════════════════════════════════════════════════════ -->
+<button id="fab" onclick="openNoteModal()" aria-label="New note">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+</button>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NOTE MODAL
+════════════════════════════════════════════════════════════════ -->
+<div id="note-modal" style="display:none;" class="modal-backdrop" onclick="handleModalBackdropClick(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span id="modal-title-label" style="font-weight:700;font-size:1rem;color:var(--text-primary);">New Note</span>
+      <button class="icon-btn" onclick="closeNoteModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div>
+          <label class="form-label" for="note-title-input">Title</label>
+          <input class="sn-input" id="note-title-input" type="text" placeholder="Sermon title…" maxlength="120" />
+        </div>
+        <div>
+          <label class="form-label">Tags</label>
+          <div class="chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-input').focus()">
+            <input id="tag-input" placeholder="Add tag, press Enter…" onkeydown="handleTagKeydown(event)" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label" for="note-content-input">Notes</label>
+          <textarea class="sn-textarea" id="note-content-input" placeholder="Your sermon notes, reflections, Scripture references…" rows="7"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNote()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/>
+        </svg>
+        Save Note
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NOTE DETAIL / READ MODAL
+════════════════════════════════════════════════════════════════ -->
+<div id="note-detail-modal" style="display:none;" class="modal-backdrop" onclick="closeNoteDetailModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-height:85vh;">
+    <div class="modal-header">
+      <span id="detail-title" style="font-weight:700;font-size:1rem;color:var(--text-primary);flex:1;margin-right:1rem;"></span>
+      <button class="icon-btn" onclick="closeNoteDetailModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="detail-tags" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.75rem;"></div>
+      <div id="detail-content" style="font-size:0.93rem;line-height:1.75;color:var(--text-primary);white-space:pre-wrap;"></div>
+      <div id="detail-meta" style="font-size:0.75rem;color:var(--text-muted);margin-top:1rem;"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn btn-ghost" onclick="editCurrentDetailNote()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        Edit
+      </button>
+      <button class="btn btn-danger" onclick="deleteCurrentDetailNote()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+        </svg>
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONFIRM DIALOG
+════════════════════════════════════════════════════════════════ -->
+<div id="confirm-dialog">
+  <div id="confirm-box">
+    <div style="font-size:2rem;margin-bottom:0.5rem;" id="confirm-icon">⚠️</div>
+    <div style="font-weight:700;font-size:1rem;color:var(--text-primary);margin-bottom:0.4rem;" id="confirm-title">Are you sure?</div>
+    <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.25rem;" id="confirm-message"></div>
+    <div style="display:flex;gap:0.75rem;justify-content:center;">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     VERSE POPOVER
+════════════════════════════════════════════════════════════════ -->
+<div id="verse-popover">
+  <div class="popover-btn" onclick="copySelectedVerse()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+    Copy verse
+  </div>
+  <div class="popover-btn" onclick="highlightSelectedVerse()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round">
+      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+    </svg>
+    Highlight
+  </div>
+  <div class="popover-btn" onclick="addVerseToNote()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Add to note
+  </div>
+  <div class="popover-btn" onclick="closeVersePopover()" style="border-top:1px solid var(--border);margin-top:0.15rem;padding-top:0.45rem;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+    Dismiss
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOAST CONTAINER
+════════════════════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   FIREBASE CONFIGURATION  ← Replace with your project config
+════════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   APP STATE
+════════════════════════════════════════════════════════════════ */
+let db = null;
+let useFirestore = false;
+let notes = [];           // active notes cache
+let recycledNotes = [];   // deleted notes cache
+let editingNoteId = null;
+let currentTags = [];
+let currentView = 'main';
+let selectedVerseRef = null;
+let highlightedVerses = new Set();
+let currentDetailNoteId = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   FIRESTORE INIT  (graceful fallback to localStorage)
+════════════════════════════════════════════════════════════════ */
+async function initFirestore() {
+  try {
+    if (!firebase || !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
+      throw new Error('Firebase not configured');
+    }
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    useFirestore = true;
+    console.log('[SermonNotes] Firestore connected.');
+  } catch (e) {
+    console.warn('[SermonNotes] Firestore unavailable, using localStorage.', e.message);
+    useFirestore = false;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PERSISTENCE LAYER (Firestore | localStorage)
+════════════════════════════════════════════════════════════════ */
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function lsKey(collection) { return `sn_${collection}`; }
+
+function lsGetAll(collection) {
+  try { return JSON.parse(localStorage.getItem(lsKey(collection)) || '[]'); }
+  catch { return []; }
+}
+
+function lsSave(collection, data) {
+  localStorage.setItem(lsKey(collection), JSON.stringify(data));
+}
+
+async function dbGetAll() {
+  if (useFirestore) {
+    const snap = await db.collection('notes').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  return lsGetAll('notes');
+}
+
+async function dbAdd(note) {
+  if (useFirestore) {
+    const ref = await db.collection('notes').add(note);
+    return { id: ref.id, ...note };
+  }
+  const all = lsGetAll('notes');
+  const doc = { id: genId(), ...note };
+  all.push(doc);
+  lsSave('notes', all);
+  return doc;
+}
+
+async function dbUpdate(id, updates) {
+  if (useFirestore) {
+    await db.collection('notes').doc(id).update(updates);
+    return;
+  }
+  const all = lsGetAll('notes');
+  const idx = all.findIndex(n => n.id === id);
+  if (idx !== -1) { all[idx] = { ...all[idx], ...updates }; lsSave('notes', all); }
+}
+
+async function dbDelete(id) {
+  if (useFirestore) {
+    await db.collection('notes').doc(id).delete();
+    return;
+  }
+  const all = lsGetAll('notes').filter(n => n.id !== id);
+  lsSave('notes', all);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIFECYCLE: AUTO-CLEANUP (30-day purge)
+════════════════════════════════════════════════════════════════ */
+async function runAutoCleanup(allDocs) {
+  const now = Date.now();
+  const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+  const toPurge = allDocs.filter(n => {
+    if (!n.isDeleted || !n.deletedAt) return false;
+    const ts = n.deletedAt.toDate ? n.deletedAt.toDate().getTime() : new Date(n.deletedAt).getTime();
+    return (now - ts) >= THIRTY_DAYS;
+  });
+  for (const doc of toPurge) {
+    console.log(`[AutoCleanup] Purging expired note: ${doc.id} — "${doc.title}"`);
+    await dbDelete(doc.id);
+  }
+  return toPurge.map(n => n.id);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   APP INIT
+════════════════════════════════════════════════════════════════ */
+async function initApp() {
+  await initFirestore();
+  loadAppearancePrefs();
+  buildBibleNav();
+  populateBibleBook();
+  populateBibleTranslations();
+
+  const allDocs = await dbGetAll();
+  const purgedIds = await runAutoCleanup(allDocs);
+  const remaining = allDocs.filter(n => !purgedIds.includes(n.id));
+
+  notes = remaining.filter(n => !n.isDeleted);
+  recycledNotes = remaining.filter(n => n.isDeleted);
+
+  renderNotes();
+  renderRecycleBin();
+  updateRecycleBadge();
+
+  // Real-time listener (Firestore only)
+  if (useFirestore) {
+    db.collection('notes').onSnapshot(snap => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      notes = all.filter(n => !n.isDeleted);
+      recycledNotes = all.filter(n => n.isDeleted);
+      renderNotes();
+      renderRecycleBin();
+      updateRecycleBadge();
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEW ROUTING
+════════════════════════════════════════════════════════════════ */
+function showView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(`view-${name}`);
+  if (el) el.classList.add('active');
+
+  // Update FAB visibility
+  document.getElementById('fab').style.display = name === 'main' ? 'flex' : 'none';
+
+  // Update search bar visibility
+  document.getElementById('search-bar').style.opacity = name === 'main' ? '1' : '0.4';
+  document.getElementById('search-input').disabled = name !== 'main';
+
+  // Update nav links
+  document.getElementById('nav-notes-link').classList.toggle('active', name === 'main');
+  document.getElementById('nav-recycle-link').classList.toggle('active', name === 'recycle');
+
+  if (name === 'bible') {
+    renderBibleChapter();
+    document.getElementById('search-bar').style.opacity = '0';
+    document.getElementById('search-input').disabled = true;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDENAV
+════════════════════════════════════════════════════════════════ */
+function openSidenav() {
+  document.getElementById('sidenav').classList.add('open');
+  document.getElementById('sidenav-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidenav() {
+  document.getElementById('sidenav').classList.remove('open');
+  document.getElementById('sidenav-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function toggleBibleAccordion() {
+  const toggle = document.getElementById('bible-accordion-toggle');
+  const body = document.getElementById('bible-accordion-body');
+  toggle.classList.toggle('expanded');
+  body.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUILD BIBLE NAVIGATION LISTS
+════════════════════════════════════════════════════════════════ */
+function buildBibleNav() {
+  if (!window.BibleEngine) return;
+  const otBooks = BibleEngine.getTestament('OT');
+  const ntBooks = BibleEngine.getTestament('NT');
+
+  document.getElementById('ot-book-list').innerHTML = otBooks.map(b =>
+    `<div class="book-link" onclick="openBibleBook('${b.id}')" title="${b.name}">${b.name}</div>`
+  ).join('');
+
+  document.getElementById('nt-book-list').innerHTML = ntBooks.map(b =>
+    `<div class="book-link" onclick="openBibleBook('${b.id}')" title="${b.name}">${b.name}</div>`
+  ).join('');
+}
+
+function openBibleBook(bookId) {
+  closeSidenav();
+  const bookSel = document.getElementById('bible-book-select');
+  if (bookSel) bookSel.value = bookId;
+  onBibleBookChange();
+  showView('bible');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BIBLE READER
+════════════════════════════════════════════════════════════════ */
+function populateBibleBook() {
+  if (!window.BibleEngine) return;
+  const sel = document.getElementById('bible-book-select');
+  const otBooks = BibleEngine.getTestament('OT');
+  const ntBooks = BibleEngine.getTestament('NT');
+
+  sel.innerHTML = `
+    <optgroup label="Old Testament">
+      ${otBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
+    </optgroup>
+    <optgroup label="New Testament">
+      ${ntBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
+    </optgroup>
+  `;
+  sel.value = 'GEN';
+  populateBibleChapters('GEN');
+}
+
+function populateBibleChapters(bookId) {
+  const count = BibleEngine.getChapterCount(bookId);
+  const sel = document.getElementById('bible-chapter-select');
+  sel.innerHTML = Array.from({ length: count }, (_, i) =>
+    `<option value="${i + 1}">Chapter ${i + 1}</option>`
+  ).join('');
+}
+
+function onBibleBookChange() {
+  const bookId = document.getElementById('bible-book-select').value;
+  populateBibleChapters(bookId);
+  renderBibleChapter();
+}
+
+function populateBibleTranslations() {
+  if (!window.BibleEngine) return;
+  const sel = document.getElementById('bible-translation-select');
+  sel.innerHTML = BibleEngine.listTranslations().map(t =>
+    `<option value="${t.id}" ${t.active ? 'selected' : ''}>${t.shortName} — ${t.name}</option>`
+  ).join('');
+}
+
+function onTranslationChange() {
+  const tid = document.getElementById('bible-translation-select').value;
+  BibleEngine.setActiveTranslation(tid);
+  document.getElementById('nav-translation').textContent = tid;
+  renderBibleChapter();
+}
+
+function renderBibleChapter() {
+  if (!window.BibleEngine) return;
+  const bookId = document.getElementById('bible-book-select').value;
+  const chapter = parseInt(document.getElementById('bible-chapter-select').value) || 1;
+  const verses = BibleEngine.getChapter(bookId, chapter);
+  const book = BibleEngine.findBook(bookId);
+  const tid = BibleEngine.getActiveTranslation();
+
+  document.getElementById('bible-content').innerHTML = `
+    <div style="margin-bottom:1.25rem;">
+      <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-primary);margin-bottom:0.15rem;">
+        ${book.name} ${chapter}
+      </h2>
+      <div style="font-size:0.75rem;color:var(--accent);font-weight:600;">${tid}</div>
+    </div>
+    ${verses.map(v => `
+      <div class="verse-row ${highlightedVerses.has(`${bookId}:${chapter}:${v.verse}`) ? 'highlighted' : ''}"
+           id="verse-${bookId}-${chapter}-${v.verse}"
+           onclick="onVerseClick(event,'${bookId}',${chapter},${v.verse})">
+        <span class="verse-num">${v.verse}</span>
+        <span class="verse-text">${escHtml(v.text)}</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+function onVerseClick(event, bookId, chapter, verse) {
+  event.stopPropagation();
+  selectedVerseRef = { bookId, chapter, verse };
+  const popover = document.getElementById('verse-popover');
+  const x = Math.min(event.clientX, window.innerWidth - 180);
+  const y = Math.min(event.clientY + 8, window.innerHeight - 160);
+  popover.style.left = x + 'px';
+  popover.style.top = y + 'px';
+  popover.classList.add('visible');
+}
+
+function closeVersePopover() {
+  document.getElementById('verse-popover').classList.remove('visible');
+  selectedVerseRef = null;
+}
+
+function copySelectedVerse() {
+  if (!selectedVerseRef) return;
+  const { bookId, chapter, verse } = selectedVerseRef;
+  const v = BibleEngine.getVerse(bookId, chapter, verse);
+  navigator.clipboard.writeText(`${v.text} — ${v.reference} (${v.translation})`).then(() => {
+    toast('Verse copied!');
+  }).catch(() => {
+    toast('Copy failed — please select manually.');
+  });
+  closeVersePopover();
+}
+
+function highlightSelectedVerse() {
+  if (!selectedVerseRef) return;
+  const { bookId, chapter, verse } = selectedVerseRef;
+  const key = `${bookId}:${chapter}:${verse}`;
+  if (highlightedVerses.has(key)) {
+    highlightedVerses.delete(key);
+  } else {
+    highlightedVerses.add(key);
+  }
+  const el = document.getElementById(`verse-${bookId}-${chapter}-${verse}`);
+  if (el) el.classList.toggle('highlighted', highlightedVerses.has(key));
+  closeVersePopover();
+}
+
+function addVerseToNote() {
+  if (!selectedVerseRef) return;
+  const { bookId, chapter, verse } = selectedVerseRef;
+  const v = BibleEngine.getVerse(bookId, chapter, verse);
+  closeVersePopover();
+  openNoteModal();
+  setTimeout(() => {
+    const ta = document.getElementById('note-content-input');
+    const ref = `\n[${v.reference} — ${v.translation}]\n${v.text}\n`;
+    ta.value += ref;
+  }, 100);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTES: CRUD
+════════════════════════════════════════════════════════════════ */
+function openNoteModal(noteId = null) {
+  editingNoteId = noteId;
+  currentTags = [];
+
+  if (noteId) {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    document.getElementById('modal-title-label').textContent = 'Edit Note';
+    document.getElementById('note-title-input').value = note.title || '';
+    document.getElementById('note-content-input').value = note.content || '';
+    currentTags = [...(note.tags || [])];
+  } else {
+    document.getElementById('modal-title-label').textContent = 'New Note';
+    document.getElementById('note-title-input').value = '';
+    document.getElementById('note-content-input').value = '';
+    currentTags = [];
+  }
+
+  renderTagChips();
+  document.getElementById('note-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('note-title-input').focus(), 80);
+}
+
+function closeNoteModal() {
+  document.getElementById('note-modal').style.display = 'none';
+  editingNoteId = null;
+  currentTags = [];
+}
+
+function handleModalBackdropClick(e) {
+  if (e.target === document.getElementById('note-modal')) closeNoteModal();
+}
+
+async function saveNote() {
+  const title = document.getElementById('note-title-input').value.trim();
+  const content = document.getElementById('note-content-input').value.trim();
+  if (!title) { toast('Please enter a title.'); document.getElementById('note-title-input').focus(); return; }
+
+  const saveBtn = document.querySelector('#note-modal .btn-primary');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+
+  try {
+    if (editingNoteId) {
+      await dbUpdate(editingNoteId, { title, content, tags: currentTags });
+      const idx = notes.findIndex(n => n.id === editingNoteId);
+      if (idx !== -1) notes[idx] = { ...notes[idx], title, content, tags: currentTags };
+      toast('Note updated!');
+    } else {
+      const newNote = {
+        title, content, tags: currentTags,
+        createdAt: new Date().toISOString(),
+        isDeleted: false, deletedAt: null
+      };
+      const saved = await dbAdd(newNote);
+      if (!useFirestore) notes.unshift(saved);
+      toast('Note saved!');
+    }
+    closeNoteModal();
+    if (!useFirestore) renderNotes();
+  } catch (e) {
+    toast('Error saving: ' + e.message);
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = 'Save Note';
+  }
+}
+
+async function softDeleteNote(id) {
+  const deletedAt = new Date().toISOString();
+  await dbUpdate(id, { isDeleted: true, deletedAt });
+  const note = notes.find(n => n.id === id);
+  if (note) {
+    note.isDeleted = true; note.deletedAt = deletedAt;
+    notes = notes.filter(n => n.id !== id);
+    recycledNotes.unshift(note);
+  }
+  renderNotes();
+  renderRecycleBin();
+  updateRecycleBadge();
+  toast('Note moved to Recycle Bin.');
+}
+
+async function restoreNote(id) {
+  await dbUpdate(id, { isDeleted: false, deletedAt: null });
+  const note = recycledNotes.find(n => n.id === id);
+  if (note) {
+    note.isDeleted = false; note.deletedAt = null;
+    recycledNotes = recycledNotes.filter(n => n.id !== id);
+    notes.unshift(note);
+  }
+  renderNotes();
+  renderRecycleBin();
+  updateRecycleBadge();
+  toast('Note restored!');
+}
+
+async function permanentDelete(id) {
+  await dbDelete(id);
+  recycledNotes = recycledNotes.filter(n => n.id !== id);
+  renderRecycleBin();
+  updateRecycleBadge();
+  toast('Note permanently deleted.');
+}
+
+function confirmDeleteNote(id) {
+  showConfirm(
+    '🗑️', 'Move to Recycle Bin',
+    'This note will be soft-deleted and recoverable for 30 days.',
+    'Move to Bin',
+    () => { softDeleteNote(id); closeNoteDetailModal(); }
+  );
+}
+
+function confirmPermanentDelete(id) {
+  showConfirm(
+    '💀', 'Permanently Delete',
+    'This action cannot be undone. The note will be gone forever.',
+    'Delete Forever',
+    () => permanentDelete(id)
+  );
+}
+
+function confirmEmptyRecycleBin() {
+  showConfirm(
+    '💣', 'Empty Recycle Bin',
+    `All ${recycledNotes.length} note(s) will be permanently deleted.`,
+    'Empty Bin',
+    async () => {
+      for (const n of [...recycledNotes]) await dbDelete(n.id);
+      recycledNotes = [];
+      renderRecycleBin();
+      updateRecycleBadge();
+      toast('Recycle Bin emptied.');
+    }
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTE DETAIL MODAL
+════════════════════════════════════════════════════════════════ */
+function openNoteDetail(id) {
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  currentDetailNoteId = id;
+  document.getElementById('detail-title').textContent = note.title;
+  document.getElementById('detail-tags').innerHTML = (note.tags || []).map(t =>
+    `<span class="tag">${escHtml(t)}</span>`
+  ).join('');
+  document.getElementById('detail-content').textContent = note.content;
+  document.getElementById('detail-meta').textContent = `Created: ${formatDate(note.createdAt)}`;
+  document.getElementById('note-detail-modal').style.display = 'flex';
+}
+
+function closeNoteDetailModal() {
+  document.getElementById('note-detail-modal').style.display = 'none';
+  currentDetailNoteId = null;
+}
+
+function editCurrentDetailNote() {
+  closeNoteDetailModal();
+  setTimeout(() => openNoteModal(currentDetailNoteId || editingNoteId), 50);
+}
+
+function deleteCurrentDetailNote() {
+  const id = currentDetailNoteId;
+  closeNoteDetailModal();
+  setTimeout(() => confirmDeleteNote(id), 80);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER: NOTES GRID
+════════════════════════════════════════════════════════════════ */
+function renderNotes(subset = null) {
+  const list = subset !== null ? subset : notes;
+  const grid = document.getElementById('notes-grid');
+  const empty = document.getElementById('main-empty');
+  document.getElementById('notes-count').textContent = `${list.length} note${list.length !== 1 ? 's' : ''}`;
+
+  if (list.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = list.map(n => buildNoteCard(n)).join('');
+}
+
+function buildNoteCard(n) {
+  const tags = (n.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+  const preview = (n.content || '').slice(0, 160).replace(/\n/g, ' ');
+  return `
+    <div class="note-card" onclick="openNoteDetail('${n.id}')">
+      <div class="card-title">${escHtml(n.title)}</div>
+      ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+      <div class="card-content">${escHtml(preview)}</div>
+      <div class="card-meta">${formatDate(n.createdAt)}</div>
+      <div class="card-actions" onclick="event.stopPropagation()">
+        <div class="icon-btn" onclick="openNoteModal('${n.id}')" title="Edit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </div>
+        <div class="icon-btn danger" onclick="confirmDeleteNote('${n.id}')" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER: RECYCLE BIN
+════════════════════════════════════════════════════════════════ */
+function renderRecycleBin() {
+  const grid = document.getElementById('recycle-grid');
+  const empty = document.getElementById('recycle-empty');
+  const emptyBtn = document.getElementById('empty-recycle-btn');
+
+  if (recycledNotes.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    emptyBtn.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  emptyBtn.style.display = 'inline-flex';
+  grid.innerHTML = recycledNotes.map(n => buildRecycleCard(n)).join('');
+}
+
+function buildRecycleCard(n) {
+  const daysLeft = getDaysLeft(n.deletedAt);
+  const daysText = daysLeft <= 0
+    ? 'Expiring soon'
+    : `Deleting permanently in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+  const tags = (n.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+  return `
+    <div class="note-card recycle-card">
+      <div class="card-title" style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
+        <span>${escHtml(n.title)}</span>
+        <span class="days-badge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/>
+          </svg>
+          ${daysLeft}d
+        </span>
+      </div>
+      ${tags ? `<div class="card-tags" style="margin-top:0.35rem;">${tags}</div>` : ''}
+      <div style="font-size:0.78rem;color:var(--danger);margin:0.35rem 0 0.5rem;opacity:0.85;">${daysText}</div>
+      <div class="card-meta">Deleted: ${formatDate(n.deletedAt)}</div>
+      <div class="card-actions">
+        <div class="icon-btn success" onclick="restoreNote('${n.id}')" title="Restore note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="1,4 1,10 7,10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+          </svg>
+        </div>
+        <div class="icon-btn danger" onclick="confirmPermanentDelete('${n.id}')" title="Delete permanently">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function updateRecycleBadge() {
+  const badge = document.getElementById('recycle-badge');
+  if (recycledNotes.length > 0) {
+    badge.textContent = recycledNotes.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEARCH / FILTER
+════════════════════════════════════════════════════════════════ */
+function filterNotes() {
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  if (!q) { renderNotes(); return; }
+  const filtered = notes.filter(n =>
+    (n.title || '').toLowerCase().includes(q) ||
+    (n.content || '').toLowerCase().includes(q) ||
+    (n.tags || []).some(t => t.toLowerCase().includes(q))
+  );
+  renderNotes(filtered);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TAG CHIP INPUT
+════════════════════════════════════════════════════════════════ */
+function handleTagKeydown(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/,$/, '');
+    if (val && !currentTags.includes(val)) {
+      currentTags.push(val);
+      renderTagChips();
+    }
+    e.target.value = '';
+  }
+  if (e.key === 'Backspace' && !e.target.value && currentTags.length) {
+    currentTags.pop();
+    renderTagChips();
+  }
+}
+
+function removeTag(tag) {
+  currentTags = currentTags.filter(t => t !== tag);
+  renderTagChips();
+}
+
+function renderTagChips() {
+  const wrap = document.getElementById('tag-chip-wrap');
+  const input = document.getElementById('tag-input');
+  wrap.innerHTML = '';
+  currentTags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'chip-tag';
+    chip.innerHTML = `${escHtml(tag)}<span class="remove" onclick="removeTag('${escHtml(tag)}')">×</span>`;
+    wrap.appendChild(chip);
+  });
+  wrap.appendChild(input);
+  input.focus();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME & FONT SIZE
+════════════════════════════════════════════════════════════════ */
+const THEMES = {
+  charcoal: { label: 'Charcoal' },
+  navy:     { label: 'Deep Navy' },
+  amber:    { label: 'Warm Amber' },
+  emerald:  { label: 'Emerald' }
+};
+
+function setTheme(name) {
+  const html = document.documentElement;
+  Object.keys(THEMES).forEach(k => html.classList.remove(`theme-${k}`));
+  html.classList.add(`theme-${name}`);
+  Object.keys(THEMES).forEach(k => {
+    document.getElementById(`dot-${k}`).classList.toggle('selected', k === name);
+  });
+  document.getElementById('theme-label').textContent = THEMES[name].label;
+  localStorage.setItem('sn_theme', name);
+}
+
+function setFontSize(size) {
+  const html = document.documentElement;
+  ['small', 'default', 'large'].forEach(s => html.classList.remove(`font-${s}`));
+  html.classList.add(`font-${size}`);
+  ['small', 'default', 'large'].forEach(s => {
+    document.getElementById(`fs-${s}`).classList.toggle('active', s === size);
+  });
+  localStorage.setItem('sn_font', size);
+}
+
+function loadAppearancePrefs() {
+  const theme = localStorage.getItem('sn_theme') || 'charcoal';
+  const font  = localStorage.getItem('sn_font')  || 'default';
+  setTheme(theme);
+  setFontSize(font);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIRM DIALOG
+════════════════════════════════════════════════════════════════ */
+let _confirmCallback = null;
+function showConfirm(icon, title, message, btnLabel, callback) {
+  document.getElementById('confirm-icon').textContent = icon;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-ok-btn').textContent = btnLabel;
+  _confirmCallback = callback;
+  document.getElementById('confirm-dialog').classList.add('visible');
+}
+function closeConfirm() {
+  document.getElementById('confirm-dialog').classList.remove('visible');
+  _confirmCallback = null;
+}
+document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+  if (_confirmCallback) _confirmCallback();
+  closeConfirm();
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════════════════════ */
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════════════════════ */
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(val) {
+  if (!val) return '';
+  const d = val.toDate ? val.toDate() : new Date(val);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function getDaysLeft(deletedAt) {
+  if (!deletedAt) return 30;
+  const d = deletedAt.toDate ? deletedAt.toDate() : new Date(deletedAt);
+  const elapsed = Date.now() - d.getTime();
+  const remaining = 30 - Math.floor(elapsed / (1000 * 60 * 60 * 24));
+  return Math.max(0, remaining);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL KEYBOARD SHORTCUTS
+════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeVersePopover();
+    closeNoteModal();
+    closeNoteDetailModal();
+    closeConfirm();
+    closeSidenav();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n' && currentView === 'main') {
+    e.preventDefault();
+    openNoteModal();
+  }
+});
+
+/* Close verse popover on outside click */
+document.addEventListener('click', e => {
+  const pop = document.getElementById('verse-popover');
+  if (pop.classList.contains('visible') && !pop.contains(e.target)) {
+    closeVersePopover();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>
