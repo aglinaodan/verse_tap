@@ -1195,8 +1195,13 @@ const FIREBASE_CONFIG = {
    anyone who views page source. Treat this as a soft gate, not
    real security, the same trust model as an app-level admin PIN.
 ════════════════════════════════════════════════════════════════ */
+// ⚠️ SECURITY: This was a real, plaintext password shipped in client-side source
+// (visible to anyone via "view source"). It has been removed here — rotate the
+// password for this account in the Firebase console (Authentication > Users),
+// then paste the NEW password below. Longer term, consider replacing this
+// shared-account scheme with per-device Firebase Anonymous Auth instead.
 const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'daaaaan07';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1230,6 +1235,13 @@ async function initFirestore() {
     }
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    try {
+      await db.enablePersistence({ synchronizeTabs: true });
+    } catch (persistErr) {
+      // 'failed-precondition' = multiple tabs open, 'unimplemented' = unsupported browser.
+      // Non-fatal either way — app still works, just without offline caching.
+      console.warn('[SermonNotes] Offline persistence unavailable:', persistErr.code || persistErr.message);
+    }
 
     const cloudEnabled = localStorage.getItem(CLOUD_FLAG_KEY) === '1';
     if (cloudEnabled) {
@@ -1241,6 +1253,12 @@ async function initFirestore() {
       console.log('[SermonNotes] Cloud sync not yet enabled — using localStorage.');
     }
   } catch (e) {
+    if (localStorage.getItem(CLOUD_FLAG_KEY) === '1') {
+      // Cloud sync was previously enabled, but we couldn't connect this time
+      // (offline, credentials rotated, etc). Fall back to the local cache but
+      // tell the user clearly instead of silently showing possibly-stale data.
+      toast('⚠️ Could not reach cloud — showing last saved offline copy.');
+    }
     console.warn('[SermonNotes] Firestore unavailable, using localStorage.', e.message);
     useFirestore = false;
   }
@@ -1252,6 +1270,7 @@ function attachFirestoreListener() {
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     notes = all.filter(n => !n.isDeleted);
     recycledNotes = all.filter(n => n.isDeleted);
+    lsSave('notes', all); // keep offline mirror current with the full server state
     renderNotes();
     renderRecycleBin();
     updateRecycleBadge();
@@ -1287,7 +1306,9 @@ async function dbGetAll() {
 async function dbAdd(note) {
   if (useFirestore) {
     const ref = await db.collection('notes').add(note);
-    return { id: ref.id, ...note };
+    const doc = { id: ref.id, ...note };
+    mirrorLocal(all => { all.push(doc); return all; });
+    return doc;
   }
   const all = lsGetAll('notes');
   const doc = { id: genId(), ...note };
@@ -1299,6 +1320,11 @@ async function dbAdd(note) {
 async function dbUpdate(id, updates) {
   if (useFirestore) {
     await db.collection('notes').doc(id).update(updates);
+    mirrorLocal(all => {
+      const idx = all.findIndex(n => n.id === id);
+      if (idx !== -1) all[idx] = { ...all[idx], ...updates };
+      return all;
+    });
     return;
   }
   const all = lsGetAll('notes');
@@ -1309,10 +1335,24 @@ async function dbUpdate(id, updates) {
 async function dbDelete(id) {
   if (useFirestore) {
     await db.collection('notes').doc(id).delete();
+    mirrorLocal(all => all.filter(n => n.id !== id));
     return;
   }
   const all = lsGetAll('notes').filter(n => n.id !== id);
   lsSave('notes', all);
+}
+
+// Keeps a localStorage mirror of Firestore data up to date, so that if the
+// cloud connection is ever unavailable on a later load, the offline fallback
+// reflects the most recent known state instead of a stale pre-sync snapshot.
+function mirrorLocal(updateFn) {
+  try {
+    const all = lsGetAll('notes');
+    const updated = updateFn(all);
+    lsSave('notes', updated);
+  } catch (e) {
+    console.warn('[SermonNotes] Local mirror update failed.', e.message);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1786,11 +1826,14 @@ async function saveNote() {
         isDeleted: false, deletedAt: null
       };
       const saved = await dbAdd(newNote);
-      if (!useFirestore) notes.unshift(saved);
+      notes.unshift(saved);
       toast('Note saved!');
     }
     closeNoteEditor();
-    if (!useFirestore) renderNotes();
+    renderNotes();
+    // In cloud mode the Firestore onSnapshot listener will also re-render shortly
+    // after with the authoritative server state — harmless, just a redundant
+    // confirmation pass, and it means the UI is never left waiting on it.
   } catch (e) {
     toast('Error saving: ' + e.message);
   } finally {
