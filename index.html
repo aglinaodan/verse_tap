@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="esv_version.js"></script>
   <style>
     /* ── CSS CUSTOM PROPERTIES (Themes) ── */
@@ -24,6 +25,7 @@
       --success:      #22c55e;
       --warn:         #f59e0b;
       --base-font:    16px;
+      --radius:       10px;
     }
 
     /* Theme: Charcoal / Dark (default) */
@@ -142,6 +144,16 @@
       border-top: 1px solid var(--border);
       background: var(--bg-card);
     }
+    #sync-btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+      background: var(--bg-base); border: 1px solid var(--border); color: var(--text-primary);
+      padding: 0.65rem 0.9rem; border-radius: var(--radius); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+    #sync-btn:hover { border-color: var(--accent); }
+    #sync-btn:active:not(:disabled) { transform: scale(0.97); }
+    #sync-btn:disabled { cursor: default; opacity: 0.85; }
+    #sync-btn.synced { color: var(--success); border-color: var(--success); }
 
     /* ── Sidenav nav items ── */
     .nav-item {
@@ -151,6 +163,7 @@
       transition: background 0.15s, color 0.15s;
     }
     .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+    .nav-item:active { background: rgba(255,255,255,0.1); }
     .nav-item svg { flex-shrink: 0; }
 
     /* ── Accordion (Bible Explorer) ── */
@@ -196,12 +209,24 @@
     /* ── Cards (Notes) ── */
     .note-card {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 1.1rem 1.2rem;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      border-radius: var(--radius); padding: 1.1rem 1.2rem;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
       cursor: pointer; position: relative; user-select: none; -webkit-user-select: none;
     }
     .note-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .note-card:active { transform: scale(0.985); }
     .note-card .card-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+    .note-card .card-tags-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.65rem; }
+    .card-tag-pill {
+      display: inline-flex; align-items: center;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.2rem 0.5rem; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.02em;
+      color: var(--text-primary); background: var(--bg-base);
+      cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+    }
+    .card-tag-pill:hover { border-color: var(--accent); }
+    .card-tag-pill:active { transform: scale(0.94); }
     .note-card .card-content { font-size: 0.88rem; color: var(--text-muted);
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       min-height: 1.3em; }
@@ -210,8 +235,9 @@
     .note-card .card-date-pill {
       display: inline-block; font-size: 0.72rem; font-weight: 700;
       color: var(--text-muted); background: var(--bg-base);
-      border: 1px solid var(--border); border-radius: 8px; padding: 0.3rem 0.6rem;
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 0.3rem 0.6rem;
     }
+    .card-edited-label { font-size: 0.75rem; color: var(--text-muted); margin-left: 0.55rem; }
     .note-card .card-select-check {
       position: absolute; top: 0.9rem; right: 0.9rem;
       width: 22px; height: 22px; border-radius: 50%;
@@ -222,7 +248,7 @@
     .note-card.selected .card-select-check { background: var(--accent); border-color: var(--accent); }
     .tag {
       background: rgba(99,102,241,0.18); color: var(--accent-light);
-      border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.72rem; font-weight: 500;
+      border-radius: var(--radius); padding: 0.15rem 0.5rem; font-size: 0.72rem; font-weight: 500;
       display: inline-block;
     }
     .note-card .card-select-check svg { display: none; }
@@ -235,10 +261,11 @@
     /* ── Icon buttons ── */
     .icon-btn {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
-      transition: background 0.15s, color 0.15s; color: var(--text-muted);
+      width: 32px; height: 32px; border-radius: var(--radius); cursor: pointer;
+      transition: background 0.15s, color 0.15s, transform 0.1s; color: var(--text-muted);
     }
     .icon-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    .icon-btn:active { transform: scale(0.9); }
     .icon-btn.danger:hover { background: rgba(239,68,68,0.15); color: var(--danger); }
     .icon-btn.success:hover { background: rgba(34,197,94,0.15); color: var(--success); }
 
@@ -253,24 +280,32 @@
       z-index: 40; border: none;
     }
     #fab:hover { background: var(--accent-dark); transform: scale(1.07); }
+    #fab:active { transform: scale(0.94); }
 
     /* ── Modal ── */
     .modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,0.65);
       z-index: 200; display: flex; align-items: flex-end;
-      animation: fadeIn 0.15s ease;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.18s ease, visibility 0s linear 0.18s;
+    }
+    .modal-backdrop.show {
+      opacity: 1; visibility: visible; pointer-events: auto;
+      transition: opacity 0.18s ease, visibility 0s linear 0s;
     }
     @media (min-width: 640px) {
       .modal-backdrop { align-items: center; justify-content: center; }
     }
     .modal-box {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 16px 16px 0 0; width: 100%; max-width: 640px;
+      border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-width: 640px;
       max-height: 90vh; display: flex; flex-direction: column;
-      animation: slideUp 0.22s ease;
+      transform: translateY(24px);
+      transition: transform 0.22s cubic-bezier(0.16,1,0.3,1);
     }
+    .modal-backdrop.show .modal-box { transform: translateY(0); }
     @media (min-width: 640px) {
-      .modal-box { border-radius: 16px; }
+      .modal-box { border-radius: var(--radius); }
     }
     .modal-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -282,7 +317,7 @@
     /* ── Form elements ── */
     .sn-input, .sn-textarea {
       width: 100%; background: var(--bg-base); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0.6rem 0.85rem;
+      border-radius: var(--radius); padding: 0.6rem 0.85rem;
       color: var(--text-primary); font-size: 0.9rem;
       transition: border-color 0.15s; outline: none;
       font-family: inherit;
@@ -295,9 +330,10 @@
     /* ── Buttons ── */
     .btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.55rem 1.1rem; border-radius: 8px; font-size: 0.85rem;
+      padding: 0.55rem 1.1rem; border-radius: var(--radius); font-size: 0.85rem;
       font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
     }
+    .btn:active { transform: scale(0.96); }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover { background: var(--accent-dark); }
     .btn-ghost { background: transparent; color: var(--text-muted);
@@ -318,7 +354,7 @@
     #search-bar {
       display: flex; align-items: center; gap: 0.5rem;
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 0.45rem 0.8rem;
+      border-radius: var(--radius); padding: 0.45rem 0.8rem;
       width: 100%;
     }
     #search-input {
@@ -337,10 +373,11 @@
       background: var(--bg-card); border: 1px solid var(--border);
       color: var(--text-muted); font-size: 0.76rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.02em;
-      padding: 0.55rem 1rem; border-radius: 999px; cursor: pointer;
+      padding: 0.4rem 0.75rem; border-radius: var(--radius); cursor: pointer;
       user-select: none; transition: all 0.15s ease;
     }
     .hashtag-chip:hover { color: var(--text-primary); border-color: var(--text-muted); }
+    .hashtag-chip:active { transform: scale(0.95); }
     .hashtag-chip.active {
       background: var(--accent); border-color: var(--accent); color: #fff;
     }
@@ -355,14 +392,14 @@
     }
     .sn-select {
       background: var(--bg-base); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text-primary);
+      border-radius: var(--radius); color: var(--text-primary);
       padding: 0.4rem 0.65rem; font-size: 0.85rem; cursor: pointer;
       outline: none;
     }
     #bible-content { padding: 1.25rem; }
     .verse-row {
       display: flex; gap: 0.5rem; padding: 0.35rem 0;
-      border-radius: 6px; transition: background 0.12s; cursor: pointer;
+      border-radius: var(--radius); transition: background 0.12s; cursor: pointer;
     }
     .verse-row:hover { background: rgba(255,255,255,0.04); }
     .verse-num { font-size: 0.72rem; font-weight: 700; color: var(--accent);
@@ -376,7 +413,7 @@
     .days-badge {
       display: inline-flex; align-items: center; gap: 0.3rem;
       background: rgba(239,68,68,0.15); color: var(--danger);
-      border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.72rem; font-weight: 600;
+      border-radius: var(--radius); padding: 0.15rem 0.6rem; font-size: 0.72rem; font-weight: 600;
     }
 
     /* ── Empty state ── */
@@ -395,7 +432,7 @@
     }
     .toast {
       background: var(--bg-nav); border: 1px solid var(--border);
-      border-radius: 10px; padding: 0.65rem 1.1rem;
+      border-radius: var(--radius); padding: 0.65rem 1.1rem;
       color: var(--text-primary); font-size: 0.85rem;
       animation: slideUp 0.22s ease, fadeOut 0.3s ease 2.7s forwards;
       white-space: nowrap; pointer-events: none;
@@ -406,14 +443,14 @@
     #verse-popover {
       position: fixed; z-index: 300;
       background: var(--bg-nav); border: 1px solid var(--border);
-      border-radius: 10px; padding: 0.5rem;
+      border-radius: var(--radius); padding: 0.5rem;
       display: none; flex-direction: column; gap: 0.25rem;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 160px;
     }
     #verse-popover.visible { display: flex; }
     .popover-btn {
       display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.45rem 0.7rem; border-radius: 6px; font-size: 0.83rem;
+      padding: 0.45rem 0.7rem; border-radius: var(--radius); font-size: 0.83rem;
       cursor: pointer; color: var(--text-muted); transition: all 0.12s;
     }
     .popover-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
@@ -425,12 +462,16 @@
     }
     .tag-plus-icon { color: var(--text-muted); font-size: 1rem; line-height: 1; flex-shrink: 0; }
     .chip-tag {
-      background: rgba(99,102,241,0.25); color: var(--accent-light);
-      border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.78rem;
+      background: rgba(255,255,255,0.92); color: var(--bg-base);
+      border-radius: var(--radius); padding: 0.2rem 0.3rem 0.2rem 0.6rem; font-size: 0.85rem; font-weight: 700;
       display: flex; align-items: center; gap: 0.3rem;
     }
-    .chip-tag .remove { cursor: pointer; line-height: 1; opacity: 0.7; }
-    .chip-tag .remove:hover { opacity: 1; }
+    .chip-tag .remove {
+      cursor: pointer; line-height: 1; opacity: 0.6; font-size: 1rem;
+      width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: background 0.12s, opacity 0.12s;
+    }
+    .chip-tag .remove:hover { opacity: 1; background: rgba(0,0,0,0.08); }
     #tag-input { flex: 1; min-width: 100px; background: none; border: none;
       outline: none; color: var(--text-primary); font-size: 0.92rem; }
     #tag-input::placeholder { color: var(--text-muted); }
@@ -439,10 +480,16 @@
     .note-page {
       position: fixed; inset: 0; z-index: 250;
       background: var(--bg-base);
-      display: none; flex-direction: column;
-      animation: fadeIn 0.15s ease;
+      display: flex; flex-direction: column;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transform: translateY(14px);
+      transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0.22s;
     }
-    .note-page.open { display: flex; }
+    .note-page.open {
+      opacity: 1; visibility: visible; pointer-events: auto;
+      transform: translateY(0);
+      transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0s;
+    }
     .note-page-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 0.9rem 1.1rem; background: var(--bg-nav);
@@ -452,17 +499,19 @@
       display: flex; align-items: center; gap: 0.1rem;
       color: var(--text-muted); font-size: 0.95rem; font-weight: 500;
       cursor: pointer; background: none; border: none; padding: 0.3rem;
-      transition: color 0.15s;
+      transition: color 0.15s, transform 0.1s;
     }
     .note-page-back:hover { color: var(--text-primary); }
+    .note-page-back:active { transform: scale(0.95); }
     .note-page-actions { display: flex; align-items: center; gap: 0.85rem; }
     .note-page-pill-btn {
       display: inline-flex; align-items: center; gap: 0.4rem;
       background: var(--accent); color: #fff; border: none;
-      padding: 0.5rem 1.1rem; border-radius: 999px; font-size: 0.88rem;
-      font-weight: 600; cursor: pointer; transition: background 0.15s;
+      padding: 0.5rem 1.1rem; border-radius: var(--radius); font-size: 0.88rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s;
     }
     .note-page-pill-btn:hover { background: var(--accent-dark); }
+    .note-page-pill-btn:active { transform: scale(0.95); }
     .note-page-pill-btn.ghost { background: rgba(255,255,255,0.1); color: var(--text-primary); }
     .note-page-pill-btn.ghost:hover { background: rgba(255,255,255,0.16); }
     .note-page-body { flex: 1; overflow-y: auto; padding: 1.5rem 1.25rem; display: flex; flex-direction: column; }
@@ -474,10 +523,24 @@
     .note-page-title-input::placeholder { color: var(--text-muted); opacity: 0.65; }
     .note-page-title-display { font-size: 1.55rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.9rem; }
     .note-page-meta-pill {
-      display: inline-block; border: 1px solid var(--border); border-radius: 10px;
-      padding: 0.55rem 0.9rem; font-size: 0.85rem; color: var(--text-muted);
-      margin-bottom: 1.1rem;
+      display: block; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.65rem 0.9rem; font-size: 0.85rem; color: var(--text-muted);
+      margin-bottom: 1.1rem; line-height: 1.7;
     }
+    #detail-meta > div { white-space: nowrap; }
+    #detail-tags {
+      display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem;
+    }
+    #detail-tags:empty { display: none; margin-top: 0; }
+    .tag-pill {
+      display: inline-flex; align-items: center;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.25rem 0.6rem; font-size: 0.82rem; font-weight: 700;
+      color: var(--text-primary); background: var(--bg-base);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+    .tag-pill:hover { border-color: var(--accent); }
+    .tag-pill:active { transform: scale(0.95); }
     .note-page-divider { border-bottom: 1px solid var(--border); }
     .note-page-content-textarea {
       flex: 1; width: 100%; min-height: 40vh; background: none; border: none; outline: none;
@@ -494,34 +557,56 @@
       padding: 0.9rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0;
     }
 
-    /* Focus/reading mode on the note viewer */
-    .note-page.focus-mode .note-page-meta-pill,
-    .note-page.focus-mode #detail-tags { display: none !important; }
+    /* Focus/reading mode on the note viewer: hide chrome, float an exit button */
+    .note-page.focus-mode .note-page-header { display: none; }
     .note-page.focus-mode .note-page-content-display { font-size: 1.08rem; }
-
-    /* Clickable Bible verse reference detected inside note content */
-    .verse-ref-link {
-      color: var(--accent-light); font-weight: 600; cursor: pointer;
-      border-bottom: 1px dashed var(--accent-light);
+    .focus-exit-btn {
+      position: fixed; right: 1.1rem; bottom: 1.3rem; z-index: 270;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(255,255,255,0.1); backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      display: none; align-items: center; justify-content: center;
+      color: var(--text-primary); cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
     }
-    .verse-ref-link:hover { color: var(--accent); border-bottom-style: solid; }
+    .focus-exit-btn:hover { background: rgba(255,255,255,0.16); }
+    .focus-exit-btn:active { transform: scale(0.9); }
+    .note-page.focus-mode .focus-exit-btn { display: flex; }
+
+    /* Clickable Bible verse reference detected inside note content — chip style */
+    .verse-ref-link {
+      display: inline-block;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-primary); font-weight: 600; font-size: 0.92em;
+      padding: 0.2rem 0.55rem; border-radius: var(--radius); margin: 0.15rem 0.1rem;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .verse-ref-link:hover { border-color: var(--accent); background: rgba(99,102,241,0.12); }
+    .verse-ref-link:active { transform: scale(0.96); }
 
     /* ── Long-press Action Sheet ── */
     #note-action-sheet {
       position: fixed; inset: 0; z-index: 260;
       background: rgba(0,0,0,0.55);
-      display: none; align-items: flex-end; justify-content: center;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.2s ease, visibility 0s linear 0.2s;
     }
-    #note-action-sheet.open { display: flex; animation: fadeIn 0.15s ease; }
+    #note-action-sheet.open {
+      opacity: 1; visibility: visible; pointer-events: auto;
+      transition: opacity 0.2s ease, visibility 0s linear 0s;
+    }
     .action-sheet-box {
       width: 100%; max-width: 480px;
       padding: 0.5rem 0.9rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
       display: flex; flex-direction: column; gap: 0.6rem;
-      animation: slideUp 0.2s ease;
+      transform: translateY(30px);
+      transition: transform 0.22s cubic-bezier(0.16,1,0.3,1);
     }
+    #note-action-sheet.open .action-sheet-box { transform: translateY(0); }
     .action-sheet-card {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 16px; overflow: hidden;
+      border-radius: var(--radius); overflow: hidden;
     }
     .action-sheet-handle {
       width: 40px; height: 4px; border-radius: 999px;
@@ -545,11 +630,12 @@
     .action-sheet-row .as-icon { flex-shrink: 0; display: flex; }
     .action-sheet-cancel {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 16px; text-align: center; padding: 0.95rem;
+      border-radius: var(--radius); text-align: center; padding: 0.95rem;
       font-weight: 700; font-size: 0.95rem; color: var(--text-primary); cursor: pointer;
-      transition: background 0.12s;
+      transition: background 0.12s, transform 0.1s;
     }
     .action-sheet-cancel:hover { background: rgba(255,255,255,0.06); }
+    .action-sheet-cancel:active { transform: scale(0.97); }
 
     /* ── Multi-select toolbar ── */
     #selection-toolbar {
@@ -576,14 +662,22 @@
     /* ── Confirm dialog ── */
     #confirm-dialog {
       position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-      z-index: 400; display: none; align-items: center; justify-content: center;
+      z-index: 400; display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity 0.18s ease, visibility 0s linear 0.18s;
     }
-    #confirm-dialog.visible { display: flex; }
+    #confirm-dialog.visible {
+      opacity: 1; visibility: visible; pointer-events: auto;
+      transition: opacity 0.18s ease, visibility 0s linear 0s;
+    }
     #confirm-box {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 14px; padding: 1.5rem; max-width: 340px; width: 90%;
+      border-radius: var(--radius); padding: 1.5rem; max-width: 340px; width: 90%;
       text-align: center;
+      transform: translateY(16px) scale(0.97); opacity: 0;
+      transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease;
     }
+    #confirm-dialog.visible #confirm-box { transform: translateY(0) scale(1); opacity: 1; }
 
     /* ── Animations ── */
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -677,8 +771,19 @@
 
   </div><!-- /sidenav-body -->
 
-  <!-- Footer: Appearance Panel -->
+  <!-- Footer: Sync + Appearance Panel -->
   <div id="sidenav-footer">
+    <!-- Cloud Sync -->
+    <div id="sync-row" style="margin-bottom:1.1rem;">
+      <button id="sync-btn" onclick="openSyncPinModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          <polyline points="16,16 12,12 8,16"/><line x1="12" y1="12" x2="12" y2="21"/>
+        </svg>
+        <span id="sync-btn-label">Sync to Cloud</span>
+      </button>
+    </div>
+
     <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);font-weight:700;margin-bottom:0.65rem;">Appearance</div>
 
     <!-- Theme dots -->
@@ -699,7 +804,7 @@
     </div>
 
     <!-- Font size segment -->
-    <div style="display:flex;gap:0.25rem;background:var(--bg-base);border:1px solid var(--border);border-radius:8px;padding:0.2rem;">
+    <div style="display:flex;gap:0.25rem;background:var(--bg-base);border:1px solid var(--border);border-radius:var(--radius);padding:0.2rem;">
       <div class="font-seg-btn" id="fs-small" onclick="setFontSize('small')" title="Small text">-A</div>
       <div class="font-seg-btn active" id="fs-default" onclick="setFontSize('default')" title="Default text">A</div>
       <div class="font-seg-btn" id="fs-large" onclick="setFontSize('large')" title="Large text">A+</div>
@@ -724,7 +829,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:0.35rem;">
       <span id="nav-translation" style="font-size:0.75rem;font-weight:700;color:var(--accent);
-        background:rgba(99,102,241,0.15);padding:0.2rem 0.55rem;border-radius:6px;"
+        background:rgba(99,102,241,0.15);padding:0.2rem 0.55rem;border-radius:var(--radius);"
         title="Bible Reader">ESV</span>
     </div>
   </header>
@@ -898,8 +1003,10 @@
   </div>
   <div class="note-page-body">
     <div class="note-page-title-display" id="detail-title"></div>
-    <div class="note-page-meta-pill" id="detail-meta"></div>
-    <div id="detail-tags" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1rem;"></div>
+    <div class="note-page-meta-pill">
+      <div id="detail-meta"></div>
+      <div id="detail-tags"></div>
+    </div>
     <div class="note-page-content-display" id="detail-content"></div>
   </div>
   <div class="note-page-footer" id="detail-delete-row">
@@ -910,12 +1017,18 @@
       Delete
     </button>
   </div>
+  <div class="focus-exit-btn" onclick="toggleNoteReadingFocus()" title="Exit focus mode">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9,3 9,9 3,9"/><polyline points="15,21 15,15 21,15"/>
+      <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+    </svg>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════
      VERSE REFERENCE POPUP (from clicking a detected verse in a note)
 ════════════════════════════════════════════════════════════════ -->
-<div id="verse-ref-modal" style="display:none;" class="modal-backdrop" onclick="closeVerseRefModal()">
+<div id="verse-ref-modal" class="modal-backdrop" onclick="closeVerseRefModal()">
   <div class="modal-box" onclick="event.stopPropagation()" style="max-height:70vh;">
     <div class="modal-header">
       <span id="verse-ref-modal-title" style="font-weight:700;font-size:0.95rem;color:var(--text-primary);"></span>
@@ -927,6 +1040,35 @@
     </div>
     <div class="modal-body">
       <div id="verse-ref-modal-text" style="font-size:0.95rem;line-height:1.75;color:var(--text-primary);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CLOUD SYNC PIN MODAL
+════════════════════════════════════════════════════════════════ -->
+<div id="sync-pin-modal" class="modal-backdrop" onclick="closeSyncPinModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width:340px;">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:1rem;color:var(--text-primary);">Sync to Cloud</span>
+      <button class="icon-btn" onclick="closeSyncPinModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 1rem;line-height:1.5;">
+        This uploads every note on this device to your private cloud backup. Enter your PIN to continue.
+      </p>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" id="sync-pin-input"
+        class="sn-input" style="text-align:center;font-size:1.4rem;letter-spacing:0.6rem;"
+        placeholder="••••" onkeydown="if(event.key==='Enter') confirmSyncPin()" />
+      <div id="sync-pin-error" style="color:var(--danger);font-size:0.8rem;margin-top:0.5rem;display:none;">Incorrect PIN. Try again.</div>
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn btn-ghost" onclick="closeSyncPinModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmSyncPin()">Confirm</button>
     </div>
   </div>
 </div>
@@ -1048,6 +1190,17 @@ const FIREBASE_CONFIG = {
 };
 
 /* ═══════════════════════════════════════════════════════════════
+   CLOUD SYNC  (one-time, PIN-gated migration to Firestore)
+   NOTE: this file has no backend — anything here is visible to
+   anyone who views page source. Treat this as a soft gate, not
+   real security, the same trust model as an app-level admin PIN.
+════════════════════════════════════════════════════════════════ */
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'daaaaan07';
+const SYNC_PIN = '0597';
+const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
+
+/* ═══════════════════════════════════════════════════════════════
    APP STATE
 ════════════════════════════════════════════════════════════════ */
 let db = null;
@@ -1068,7 +1221,7 @@ let selectionMode = false;
 let selectedNoteIds = new Set();
 
 /* ═══════════════════════════════════════════════════════════════
-   FIRESTORE INIT  (graceful fallback to localStorage)
+   FIRESTORE INIT  (stays local-only until the one-time cloud sync)
 ════════════════════════════════════════════════════════════════ */
 async function initFirestore() {
   try {
@@ -1077,12 +1230,32 @@ async function initFirestore() {
     }
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    useFirestore = true;
-    console.log('[SermonNotes] Firestore connected.');
+
+    const cloudEnabled = localStorage.getItem(CLOUD_FLAG_KEY) === '1';
+    if (cloudEnabled) {
+      await firebase.auth().signInWithEmailAndPassword(SYNC_SERVICE_EMAIL, SYNC_SERVICE_PASSWORD);
+      useFirestore = true;
+      console.log('[SermonNotes] Firestore connected (cloud sync enabled).');
+    } else {
+      useFirestore = false;
+      console.log('[SermonNotes] Cloud sync not yet enabled — using localStorage.');
+    }
   } catch (e) {
     console.warn('[SermonNotes] Firestore unavailable, using localStorage.', e.message);
     useFirestore = false;
   }
+}
+
+function attachFirestoreListener() {
+  if (!useFirestore || !db) return;
+  db.collection('notes').onSnapshot(snap => {
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    notes = all.filter(n => !n.isDeleted);
+    recycledNotes = all.filter(n => n.isDeleted);
+    renderNotes();
+    renderRecycleBin();
+    updateRecycleBadge();
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1182,18 +1355,10 @@ async function initApp() {
   renderNotes();
   renderRecycleBin();
   updateRecycleBadge();
+  updateSyncButtonState();
 
   // Real-time listener (Firestore only)
-  if (useFirestore) {
-    db.collection('notes').onSnapshot(snap => {
-      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      notes = all.filter(n => !n.isDeleted);
-      recycledNotes = all.filter(n => n.isDeleted);
-      renderNotes();
-      renderRecycleBin();
-      updateRecycleBadge();
-    });
-  }
+  attachFirestoreListener();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1402,11 +1567,88 @@ function openVerseRefModal(ref) {
   document.getElementById('verse-ref-modal-title').textContent =
     translation ? `${refLabel} (${translation})` : refLabel;
   document.getElementById('verse-ref-modal-text').textContent = text.trim() || 'Verse not found.';
-  document.getElementById('verse-ref-modal').style.display = 'flex';
+  document.getElementById('verse-ref-modal').classList.add('show');
 }
 
 function closeVerseRefModal() {
-  document.getElementById('verse-ref-modal').style.display = 'none';
+  document.getElementById('verse-ref-modal').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CLOUD SYNC (one-time, PIN-gated migration to Firestore)
+════════════════════════════════════════════════════════════════ */
+function updateSyncButtonState() {
+  const btn = document.getElementById('sync-btn');
+  const label = document.getElementById('sync-btn-label');
+  if (!btn || !label) return;
+  const synced = localStorage.getItem(CLOUD_FLAG_KEY) === '1';
+  btn.classList.toggle('synced', synced);
+  label.textContent = synced ? 'Synced ✓' : 'Sync to Cloud';
+}
+
+function openSyncPinModal() {
+  document.getElementById('sync-pin-input').value = '';
+  document.getElementById('sync-pin-error').style.display = 'none';
+  document.getElementById('sync-pin-modal').classList.add('show');
+  setTimeout(() => document.getElementById('sync-pin-input').focus(), 80);
+}
+
+function closeSyncPinModal() {
+  document.getElementById('sync-pin-modal').classList.remove('show');
+}
+
+function confirmSyncPin() {
+  const val = document.getElementById('sync-pin-input').value.trim();
+  if (val !== SYNC_PIN) {
+    document.getElementById('sync-pin-error').style.display = 'block';
+    document.getElementById('sync-pin-input').value = '';
+    document.getElementById('sync-pin-input').focus();
+    return;
+  }
+  closeSyncPinModal();
+  closeSidenav();
+  runCloudSync();
+}
+
+async function runCloudSync() {
+  const btn = document.getElementById('sync-btn');
+  const label = document.getElementById('sync-btn-label');
+  btn.disabled = true;
+  label.textContent = 'Syncing…';
+
+  try {
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    await firebase.auth().signInWithEmailAndPassword(SYNC_SERVICE_EMAIL, SYNC_SERVICE_PASSWORD);
+    db = firebase.firestore();
+
+    const localNotes = lsGetAll('notes');
+    if (localNotes.length > 0) {
+      toast(`Syncing ${localNotes.length} note${localNotes.length !== 1 ? 's' : ''}…`);
+      const CHUNK = 400;
+      for (let i = 0; i < localNotes.length; i += CHUNK) {
+        const batch = db.batch();
+        localNotes.slice(i, i + CHUNK).forEach(n => {
+          const { id, ...data } = n;
+          batch.set(db.collection('notes').doc(id), data, { merge: true });
+        });
+        await batch.commit();
+      }
+    }
+
+    localStorage.setItem(CLOUD_FLAG_KEY, '1');
+    useFirestore = true;
+    updateSyncButtonState();
+    btn.disabled = false;
+    toast('✅ Sync complete! Notes now save to the cloud.');
+
+    attachFirestoreListener();
+  } catch (e) {
+    btn.disabled = false;
+    updateSyncButtonState();
+    toast('Sync failed: ' + e.message);
+  }
 }
 
 function renderBibleChapter() {
@@ -1531,14 +1773,16 @@ async function saveNote() {
 
   try {
     if (editingNoteId) {
-      await dbUpdate(editingNoteId, { title, content, tags: currentTags });
+      const updatedAt = new Date().toISOString();
+      await dbUpdate(editingNoteId, { title, content, tags: currentTags, updatedAt });
       const idx = notes.findIndex(n => n.id === editingNoteId);
-      if (idx !== -1) notes[idx] = { ...notes[idx], title, content, tags: currentTags };
+      if (idx !== -1) notes[idx] = { ...notes[idx], title, content, tags: currentTags, updatedAt };
       toast('Note updated!');
     } else {
+      const now = new Date().toISOString();
       const newNote = {
         title, content, tags: currentTags,
-        createdAt: new Date().toISOString(),
+        createdAt: now, updatedAt: now,
         isDeleted: false, deletedAt: null
       };
       const saved = await dbAdd(newNote);
@@ -1630,10 +1874,14 @@ function confirmEmptyRecycleBin() {
 ════════════════════════════════════════════════════════════════ */
 function renderNoteViewPage(data) {
   document.getElementById('detail-title').textContent = data.title || 'Untitled Sermon';
-  document.getElementById('detail-tags').innerHTML = (data.tags || []).map(t =>
-    `<span class="tag">${escHtml(t)}</span>`
+  document.getElementById('detail-meta').innerHTML = `
+    <div>Created ${escHtml(formatDate(data.createdAt))}</div>
+    <div>Last edited ${escHtml(formatDate(data.updatedAt || data.createdAt))}</div>
+  `;
+  const tags = Array.isArray(data.tags) ? data.tags.filter(Boolean) : [];
+  document.getElementById('detail-tags').innerHTML = tags.map(t =>
+    `<span class="tag-pill" onclick="filterByTagFromViewer('${encodeURIComponent(t)}')">#${escHtml(t)}</span>`
   ).join('');
-  document.getElementById('detail-meta').textContent = `Created ${formatDate(data.createdAt)}`;
 
   const contentEl = document.getElementById('detail-content');
   if (data.content && data.content.trim()) {
@@ -1646,6 +1894,23 @@ function renderNoteViewPage(data) {
 
   document.getElementById('note-view-page').classList.remove('focus-mode');
   document.getElementById('detail-delete-row').style.display = currentDetailNoteId ? 'flex' : 'none';
+}
+
+function filterByTagFromViewer(encodedTag) {
+  const tag = decodeURIComponent(encodedTag);
+  document.getElementById('note-view-page').classList.remove('open');
+  document.getElementById('note-editor-page').classList.remove('open');
+  currentDetailNoteId = null;
+  viewingDraft = null;
+  activeTagFilter = tag;
+  showView('main');
+  filterNotes();
+}
+
+function filterByTagFromCard(event, encodedTag) {
+  event.stopPropagation();
+  activeTagFilter = decodeURIComponent(encodedTag);
+  filterNotes();
 }
 
 function openNoteDetail(id) {
@@ -1753,6 +2018,13 @@ function buildNoteCard(n) {
     ? escHtml(preview)
     : '<span class="card-content-empty">No additional text…</span>';
   const isSelected = selectionMode && selectedNoteIds.has(n.id);
+  const tags = Array.isArray(n.tags) ? n.tags.filter(Boolean) : [];
+  const tagsHtml = tags.length ? `
+    <div class="card-tags-row">
+      ${tags.map(t => `<span class="card-tag-pill" onclick="filterByTagFromCard(event, '${encodeURIComponent(t)}')">#${escHtml(t)}</span>`).join('')}
+    </div>
+  ` : '';
+  const wasEdited = !!(n.updatedAt && n.updatedAt !== n.createdAt);
   return `
     <div class="note-card${isSelected ? ' selected' : ''}" data-note-id="${n.id}">
       ${selectionMode ? `
@@ -1763,9 +2035,11 @@ function buildNoteCard(n) {
         </div>
       ` : ''}
       <div class="card-title">${escHtml(n.title)}</div>
+      ${tagsHtml}
       <div class="card-content">${previewHtml}</div>
       <div class="card-divider"></div>
       <div class="card-date-pill">${formatDateShort(n.createdAt)}</div>
+      ${wasEdited ? '<span class="card-edited-label">· Edited</span>' : ''}
     </div>
   `;
 }
@@ -2027,14 +2301,8 @@ function renderHashtagFilters() {
   if (!bar) return;
 
   const tagSet = new Set();
-  notes.forEach(n => (n.tags || []).forEach(t => t && tagSet.add(t)));
+  notes.forEach(n => (Array.isArray(n.tags) ? n.tags : []).forEach(t => t && tagSet.add(t)));
   const tags = Array.from(tagSet).sort((a, b) => a.localeCompare(b));
-
-  if (tags.length === 0) {
-    bar.innerHTML = '';
-    activeTagFilter = null;
-    return;
-  }
 
   const allChip = `<span class="hashtag-chip${activeTagFilter ? '' : ' active'}" onclick="toggleTagFilter('')">All Notes</span>`;
   const tagChips = tags.map(t => `
@@ -2200,6 +2468,7 @@ document.addEventListener('keydown', e => {
     closeVersePopover();
     closeVerseRefModal();
     closeNoteActionSheet();
+    closeSyncPinModal();
     if (document.getElementById('note-view-page').classList.contains('open')) {
       closeNoteView();
     } else if (document.getElementById('note-editor-page').classList.contains('open')) {
