@@ -285,7 +285,7 @@
     /* ── Modal ── */
     .modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-      z-index: 200; display: flex; align-items: flex-end;
+      z-index: 280; display: flex; align-items: flex-end;
       opacity: 0; visibility: hidden; pointer-events: none;
       transition: opacity 0.18s ease, visibility 0s linear 0.18s;
     }
@@ -1200,8 +1200,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1274,6 +1274,9 @@ function attachFirestoreListener() {
     renderNotes();
     renderRecycleBin();
     updateRecycleBadge();
+  }, err => {
+    console.error('[SermonNotes] Real-time listener error:', err.message);
+    toast('⚠️ Lost connection to cloud notes: ' + err.message);
   });
 }
 
@@ -1385,7 +1388,18 @@ async function initApp() {
   buildVerseRefIndex();
   setupNoteGridInteractions();
 
-  const allDocs = await dbGetAll();
+  let allDocs;
+  try {
+    allDocs = await dbGetAll();
+  } catch (e) {
+    // A failed read here (permission-denied, network, etc) used to silently
+    // stop the whole init function before renderNotes() ever ran, leaving
+    // the note list AND the tag filter bar blank with no visible error.
+    console.error('[SermonNotes] Initial notes fetch failed, falling back to local cache:', e.message);
+    toast('⚠️ Could not load cloud notes — showing local copy. Check console for details.');
+    useFirestore = false;
+    allDocs = lsGetAll('notes');
+  }
   const purgedIds = await runAutoCleanup(allDocs);
   const remaining = allDocs.filter(n => !purgedIds.includes(n.id));
 
