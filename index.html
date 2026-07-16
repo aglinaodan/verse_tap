@@ -196,21 +196,41 @@
     /* ── Cards (Notes) ── */
     .note-card {
       background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 1rem 1.1rem;
+      border-radius: 14px; padding: 1.1rem 1.2rem;
       transition: border-color 0.15s, box-shadow 0.15s;
-      cursor: default; position: relative;
+      cursor: pointer; position: relative; user-select: none; -webkit-user-select: none;
     }
     .note-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-    .note-card .card-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem; }
-    .note-card .card-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem; }
-    .note-card .tag {
+    .note-card .card-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+    .note-card .card-content { font-size: 0.88rem; color: var(--text-muted);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      min-height: 1.3em; }
+    .note-card .card-content-empty { font-style: italic; opacity: 0.75; }
+    .note-card .card-divider { border-bottom: 1px solid var(--border); margin: 0.85rem 0 0.75rem; }
+    .note-card .card-date-pill {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      color: var(--text-muted); background: var(--bg-base);
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.3rem 0.6rem;
+    }
+    .note-card .card-select-check {
+      position: absolute; top: 0.9rem; right: 0.9rem;
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid var(--border); background: var(--bg-base);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .note-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .note-card.selected .card-select-check { background: var(--accent); border-color: var(--accent); }
+    .tag {
       background: rgba(99,102,241,0.18); color: var(--accent-light);
       border-radius: 999px; padding: 0.1rem 0.55rem; font-size: 0.72rem; font-weight: 500;
+      display: inline-block;
     }
-    .note-card .card-content { font-size: 0.85rem; color: var(--text-muted);
-      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .note-card .card-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; }
-    .note-card .card-actions { display: flex; gap: 0.4rem; margin-top: 0.75rem; justify-content: flex-end; }
+    .note-card .card-select-check svg { display: none; }
+    .note-card.selected .card-select-check svg { display: block; }
+    .recycle-card { cursor: default; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.4rem; }
+    .card-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .card-actions { display: flex; gap: 0.4rem; margin-top: 0.75rem; justify-content: flex-end; }
 
     /* ── Icon buttons ── */
     .icon-btn {
@@ -286,18 +306,44 @@
     .btn-danger { background: var(--danger); color: #fff; }
     .btn-danger:hover { opacity: 0.88; }
 
-    /* ── Search bar ── */
+    /* ── Search + Hashtag filter bar (below top nav) ── */
+    #search-filter-bar {
+      background: var(--bg-nav);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 0.55rem;
+      transition: opacity 0.2s ease;
+    }
     #search-bar {
       display: flex; align-items: center; gap: 0.5rem;
       background: var(--bg-card); border: 1px solid var(--border);
       border-radius: 10px; padding: 0.45rem 0.8rem;
-      flex: 1; max-width: 400px;
+      width: 100%;
     }
     #search-input {
       flex: 1; background: none; border: none; outline: none;
       color: var(--text-primary); font-size: 0.88rem;
     }
     #search-input::placeholder { color: var(--text-muted); }
+
+    /* ── Hashtag filter chips ── */
+    #hashtag-filter-bar {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+    }
+    #hashtag-filter-bar:empty { display: none; }
+    .hashtag-chip {
+      display: inline-flex; align-items: center; gap: 0.2rem;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 0.76rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.02em;
+      padding: 0.55rem 1rem; border-radius: 999px; cursor: pointer;
+      user-select: none; transition: all 0.15s ease;
+    }
+    .hashtag-chip:hover { color: var(--text-primary); border-color: var(--text-muted); }
+    .hashtag-chip.active {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
 
     /* ── Bible Reader ── */
     #bible-view { padding: 0; }
@@ -372,14 +418,12 @@
     }
     .popover-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
 
-    /* ── Chip input ── */
+    /* ── Chip input (tags) ── */
     .chip-wrap {
-      display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
-      background: var(--bg-base); border: 1px solid var(--border);
-      border-radius: 8px; padding: 0.4rem 0.6rem; min-height: 42px;
-      cursor: text;
+      display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+      cursor: text; padding: 0.2rem 0;
     }
-    .chip-wrap:focus-within { border-color: var(--accent); }
+    .tag-plus-icon { color: var(--text-muted); font-size: 1rem; line-height: 1; flex-shrink: 0; }
     .chip-tag {
       background: rgba(99,102,241,0.25); color: var(--accent-light);
       border-radius: 999px; padding: 0.15rem 0.55rem; font-size: 0.78rem;
@@ -387,8 +431,134 @@
     }
     .chip-tag .remove { cursor: pointer; line-height: 1; opacity: 0.7; }
     .chip-tag .remove:hover { opacity: 1; }
-    #tag-input { flex: 1; min-width: 80px; background: none; border: none;
-      outline: none; color: var(--text-primary); font-size: 0.88rem; }
+    #tag-input { flex: 1; min-width: 100px; background: none; border: none;
+      outline: none; color: var(--text-primary); font-size: 0.92rem; }
+    #tag-input::placeholder { color: var(--text-muted); }
+
+    /* ── Full-screen note pages (editor / viewer) ── */
+    .note-page {
+      position: fixed; inset: 0; z-index: 250;
+      background: var(--bg-base);
+      display: none; flex-direction: column;
+      animation: fadeIn 0.15s ease;
+    }
+    .note-page.open { display: flex; }
+    .note-page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.1rem; background: var(--bg-nav);
+      border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 0.75rem;
+    }
+    .note-page-back {
+      display: flex; align-items: center; gap: 0.1rem;
+      color: var(--text-muted); font-size: 0.95rem; font-weight: 500;
+      cursor: pointer; background: none; border: none; padding: 0.3rem;
+      transition: color 0.15s;
+    }
+    .note-page-back:hover { color: var(--text-primary); }
+    .note-page-actions { display: flex; align-items: center; gap: 0.85rem; }
+    .note-page-pill-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--accent); color: #fff; border: none;
+      padding: 0.5rem 1.1rem; border-radius: 999px; font-size: 0.88rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .note-page-pill-btn:hover { background: var(--accent-dark); }
+    .note-page-pill-btn.ghost { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+    .note-page-pill-btn.ghost:hover { background: rgba(255,255,255,0.16); }
+    .note-page-body { flex: 1; overflow-y: auto; padding: 1.5rem 1.25rem; display: flex; flex-direction: column; }
+    .note-page-title-input {
+      width: 100%; background: none; border: none; outline: none;
+      color: var(--text-primary); font-size: 1.55rem; font-weight: 700;
+      font-family: inherit; padding: 0; margin-bottom: 1.1rem;
+    }
+    .note-page-title-input::placeholder { color: var(--text-muted); opacity: 0.65; }
+    .note-page-title-display { font-size: 1.55rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.9rem; }
+    .note-page-meta-pill {
+      display: inline-block; border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.55rem 0.9rem; font-size: 0.85rem; color: var(--text-muted);
+      margin-bottom: 1.1rem;
+    }
+    .note-page-divider { border-bottom: 1px solid var(--border); }
+    .note-page-content-textarea {
+      flex: 1; width: 100%; min-height: 40vh; background: none; border: none; outline: none;
+      resize: none; color: var(--text-primary); font-size: 0.95rem; line-height: 1.75;
+      font-family: inherit;
+    }
+    .note-page-content-textarea::placeholder { color: var(--text-muted); opacity: 0.65; }
+    .note-page-content-display {
+      font-size: 0.95rem; line-height: 1.8; color: var(--text-primary); white-space: pre-wrap;
+    }
+    .note-page-content-display.empty { color: var(--text-muted); font-style: italic; }
+    .note-page-footer {
+      display: flex; justify-content: flex-end; gap: 0.6rem;
+      padding: 0.9rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+
+    /* Focus/reading mode on the note viewer */
+    .note-page.focus-mode .note-page-meta-pill,
+    .note-page.focus-mode #detail-tags { display: none !important; }
+    .note-page.focus-mode .note-page-content-display { font-size: 1.08rem; }
+
+    /* Clickable Bible verse reference detected inside note content */
+    .verse-ref-link {
+      color: var(--accent-light); font-weight: 600; cursor: pointer;
+      border-bottom: 1px dashed var(--accent-light);
+    }
+    .verse-ref-link:hover { color: var(--accent); border-bottom-style: solid; }
+
+    /* ── Long-press Action Sheet ── */
+    #note-action-sheet {
+      position: fixed; inset: 0; z-index: 260;
+      background: rgba(0,0,0,0.55);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    #note-action-sheet.open { display: flex; animation: fadeIn 0.15s ease; }
+    .action-sheet-box {
+      width: 100%; max-width: 480px;
+      padding: 0.5rem 0.9rem calc(0.9rem + env(safe-area-inset-bottom, 0px));
+      display: flex; flex-direction: column; gap: 0.6rem;
+      animation: slideUp 0.2s ease;
+    }
+    .action-sheet-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+    }
+    .action-sheet-handle {
+      width: 40px; height: 4px; border-radius: 999px;
+      background: var(--border); margin: 0.6rem auto 0.3rem;
+    }
+    .action-sheet-title {
+      text-align: center; font-weight: 700; font-size: 1.05rem;
+      color: var(--text-primary); padding: 0.5rem 1rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .action-sheet-row {
+      display: flex; align-items: center; gap: 0.8rem;
+      padding: 0.95rem 1.1rem; font-size: 0.95rem; font-weight: 600;
+      color: var(--text-primary); cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    .action-sheet-row:last-child { border-bottom: none; }
+    .action-sheet-row:hover, .action-sheet-row:active { background: rgba(255,255,255,0.06); }
+    .action-sheet-row.danger { color: var(--danger); }
+    .action-sheet-row .as-icon { flex-shrink: 0; display: flex; }
+    .action-sheet-cancel {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px; text-align: center; padding: 0.95rem;
+      font-weight: 700; font-size: 0.95rem; color: var(--text-primary); cursor: pointer;
+      transition: background 0.12s;
+    }
+    .action-sheet-cancel:hover { background: rgba(255,255,255,0.06); }
+
+    /* ── Multi-select toolbar ── */
+    #selection-toolbar {
+      display: none; align-items: center; justify-content: space-between;
+      gap: 0.75rem; padding: 0.7rem 1rem; background: var(--bg-nav);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #selection-toolbar .sel-count { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+    #selection-toolbar .sel-actions { display: flex; gap: 0.5rem; }
 
     /* ── View header ── */
     .view-header {
@@ -422,7 +592,6 @@
 
     /* ── Responsive nav search ── */
     @media (max-width: 480px) {
-      #search-bar { max-width: none; }
       #nav-title { display: none; }
     }
   </style>
@@ -553,20 +722,23 @@
       </button>
       <span id="nav-title" style="font-weight:700;font-size:1rem;color:var(--text-primary)">SermonNotes</span>
     </div>
-    <div style="flex:1;display:flex;justify-content:center;padding:0 0.75rem;">
-      <div id="search-bar">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input type="text" id="search-input" placeholder="Search notes…" oninput="filterNotes()" />
-      </div>
-    </div>
     <div style="display:flex;align-items:center;gap:0.35rem;">
       <span id="nav-translation" style="font-size:0.75rem;font-weight:700;color:var(--accent);
-        background:rgba(99,102,241,0.15);padding:0.2rem 0.55rem;border-radius:6px;cursor:pointer;"
-        onclick="showView('bible')" title="Bible Reader">ESV</span>
+        background:rgba(99,102,241,0.15);padding:0.2rem 0.55rem;border-radius:6px;"
+        title="Bible Reader">ESV</span>
     </div>
   </header>
+
+  <!-- Search + Hashtag Filter Bar -->
+  <div id="search-filter-bar">
+    <div id="search-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Search titles or #tags…" oninput="filterNotes()" />
+    </div>
+    <div id="hashtag-filter-bar"></div>
+  </div>
 
   <!-- Content Area -->
   <div id="content-area">
@@ -576,6 +748,13 @@
       <div class="view-header">
         <div class="view-title">My Notes</div>
         <div style="font-size:0.8rem;color:var(--text-muted);" id="notes-count">0 notes</div>
+      </div>
+      <div id="selection-toolbar">
+        <span class="sel-count" id="selection-count">0 selected</span>
+        <div class="sel-actions">
+          <button class="btn btn-danger" onclick="bulkDeleteSelected()">Delete</button>
+          <button class="btn btn-ghost" onclick="exitSelectionMode()">Cancel</button>
+        </div>
       </div>
       <div id="notes-grid"></div>
       <div id="main-empty" class="empty-state" style="display:none;">
@@ -639,89 +818,165 @@
 <!-- ═══════════════════════════════════════════════════════════════
      FAB
 ════════════════════════════════════════════════════════════════ -->
-<button id="fab" onclick="openNoteModal()" aria-label="New note">
+<button id="fab" onclick="openNoteEditor()" aria-label="New note">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 </button>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     NOTE MODAL
+     NOTE EDITOR (full-screen page)
 ════════════════════════════════════════════════════════════════ -->
-<div id="note-modal" style="display:none;" class="modal-backdrop" onclick="handleModalBackdropClick(event)">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <span id="modal-title-label" style="font-weight:700;font-size:1rem;color:var(--text-primary);">New Note</span>
-      <button class="icon-btn" onclick="closeNoteModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
+<div id="note-editor-page" class="note-page">
+  <div class="note-page-header">
+    <button class="note-page-back" onclick="closeNoteEditor()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15,18 9,12 15,6"/>
+      </svg>
+      All Notes
+    </button>
+    <button class="note-page-pill-btn" onclick="viewFromEditor()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+      View
+    </button>
+  </div>
+  <div class="note-page-body">
+    <input class="note-page-title-input" id="note-title-input" type="text" placeholder="Sermon Title" maxlength="120" />
+    <div class="chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-input').focus()">
+      <span class="tag-plus-icon">+</span>
+      <input id="tag-input" placeholder="Add tag…" onkeydown="handleTagKeydown(event)" />
     </div>
-    <div class="modal-body">
-      <div style="display:flex;flex-direction:column;gap:1rem;">
-        <div>
-          <label class="form-label" for="note-title-input">Title</label>
-          <input class="sn-input" id="note-title-input" type="text" placeholder="Sermon title…" maxlength="120" />
-        </div>
-        <div>
-          <label class="form-label">Tags</label>
-          <div class="chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-input').focus()">
-            <input id="tag-input" placeholder="Add tag, press Enter…" onkeydown="handleTagKeydown(event)" />
-          </div>
-        </div>
-        <div>
-          <label class="form-label" for="note-content-input">Notes</label>
-          <textarea class="sn-textarea" id="note-content-input" placeholder="Your sermon notes, reflections, Scripture references…" rows="7"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;">
-      <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNote()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/>
-        </svg>
-        Save Note
-      </button>
-    </div>
+    <div class="note-page-divider" style="margin:1.1rem 0;"></div>
+    <textarea class="note-page-content-textarea" id="note-content-input" placeholder="Your sermon notes, reflections, Scripture references…"></textarea>
+  </div>
+  <div class="note-page-footer">
+    <button class="btn btn-ghost" onclick="closeNoteEditor()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveNote()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/>
+      </svg>
+      Save Note
+    </button>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     NOTE DETAIL / READ MODAL
+     NOTE VIEWER (full-screen page, read-only)
 ════════════════════════════════════════════════════════════════ -->
-<div id="note-detail-modal" style="display:none;" class="modal-backdrop" onclick="closeNoteDetailModal()">
-  <div class="modal-box" onclick="event.stopPropagation()" style="max-height:85vh;">
-    <div class="modal-header">
-      <span id="detail-title" style="font-weight:700;font-size:1rem;color:var(--text-primary);flex:1;margin-right:1rem;"></span>
-      <button class="icon-btn" onclick="closeNoteDetailModal()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+<div id="note-view-page" class="note-page">
+  <div class="note-page-header">
+    <button class="note-page-back" onclick="closeNoteView()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15,18 9,12 15,6"/>
+      </svg>
+      Back
+    </button>
+    <div class="note-page-actions">
+      <div class="icon-btn" title="Focus mode" onclick="toggleNoteReadingFocus()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/>
+          <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
         </svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div id="detail-tags" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.75rem;"></div>
-      <div id="detail-content" style="font-size:0.93rem;line-height:1.75;color:var(--text-primary);white-space:pre-wrap;"></div>
-      <div id="detail-meta" style="font-size:0.75rem;color:var(--text-muted);margin-top:1rem;"></div>
-    </div>
-    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;">
-      <button class="btn btn-ghost" onclick="editCurrentDetailNote()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      </div>
+      <div class="icon-btn" title="Share" onclick="shareCurrentNote()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        </svg>
+      </div>
+      <button class="note-page-pill-btn ghost" onclick="editCurrentDetailNote()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
         Edit
       </button>
-      <button class="btn btn-danger" onclick="deleteCurrentDetailNote()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+    </div>
+  </div>
+  <div class="note-page-body">
+    <div class="note-page-title-display" id="detail-title"></div>
+    <div class="note-page-meta-pill" id="detail-meta"></div>
+    <div id="detail-tags" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1rem;"></div>
+    <div class="note-page-content-display" id="detail-content"></div>
+  </div>
+  <div class="note-page-footer" id="detail-delete-row">
+    <button class="btn btn-danger" onclick="deleteCurrentDetailNote()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+      </svg>
+      Delete
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     VERSE REFERENCE POPUP (from clicking a detected verse in a note)
+════════════════════════════════════════════════════════════════ -->
+<div id="verse-ref-modal" style="display:none;" class="modal-backdrop" onclick="closeVerseRefModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-height:70vh;">
+    <div class="modal-header">
+      <span id="verse-ref-modal-title" style="font-weight:700;font-size:0.95rem;color:var(--text-primary);"></span>
+      <button class="icon-btn" onclick="closeVerseRefModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
-        Delete
       </button>
     </div>
+    <div class="modal-body">
+      <div id="verse-ref-modal-text" style="font-size:0.95rem;line-height:1.75;color:var(--text-primary);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NOTE ACTION SHEET (long-press on a note card)
+════════════════════════════════════════════════════════════════ -->
+<div id="note-action-sheet" onclick="closeNoteActionSheet()">
+  <div class="action-sheet-box" onclick="event.stopPropagation()">
+    <div class="action-sheet-card">
+      <div class="action-sheet-handle"></div>
+      <div class="action-sheet-title" id="action-sheet-title"></div>
+      <div class="action-sheet-row" onclick="actionSheetSelectMultiple()">
+        <span class="as-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9,11 12,14 22,4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </span>
+        Select Multiple…
+      </div>
+      <div class="action-sheet-row" onclick="actionSheetTogglePin()">
+        <span class="as-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="17" x2="12" y2="22"/>
+            <path d="M5 17h14l-1.5-2.5A3 3 0 0 1 17 13V8a5 5 0 0 0-10 0v5a3 3 0 0 1-.5 1.5z"/>
+          </svg>
+        </span>
+        <span id="action-sheet-pin-label">Pin to Top</span>
+      </div>
+      <div class="action-sheet-row" onclick="actionSheetShare()">
+        <span class="as-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </span>
+        Share Sermon
+      </div>
+      <div class="action-sheet-row danger" onclick="actionSheetDelete()">
+        <span class="as-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+        </span>
+        Delete Sermon
+      </div>
+    </div>
+    <div class="action-sheet-cancel" onclick="closeNoteActionSheet()">Cancel</div>
   </div>
 </div>
 
@@ -802,9 +1057,15 @@ let recycledNotes = [];   // deleted notes cache
 let editingNoteId = null;
 let currentTags = [];
 let currentView = 'main';
+let activeTagFilter = null;
 let selectedVerseRef = null;
 let highlightedVerses = new Set();
 let currentDetailNoteId = null;
+let viewReturnTarget = 'main';   // 'main' | 'editor' — where "Back"/close returns to
+let viewingDraft = null;         // holds unsaved {title, content, tags} when previewing from editor
+let actionSheetNoteId = null;
+let selectionMode = false;
+let selectedNoteIds = new Set();
 
 /* ═══════════════════════════════════════════════════════════════
    FIRESTORE INIT  (graceful fallback to localStorage)
@@ -908,6 +1169,8 @@ async function initApp() {
   buildBibleNav();
   populateBibleBook();
   populateBibleTranslations();
+  buildVerseRefIndex();
+  setupNoteGridInteractions();
 
   const allDocs = await dbGetAll();
   const purgedIds = await runAutoCleanup(allDocs);
@@ -938,6 +1201,7 @@ async function initApp() {
 ════════════════════════════════════════════════════════════════ */
 function showView(name) {
   currentView = name;
+  if (name !== 'main' && selectionMode) exitSelectionMode();
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(`view-${name}`);
   if (el) el.classList.add('active');
@@ -945,8 +1209,8 @@ function showView(name) {
   // Update FAB visibility
   document.getElementById('fab').style.display = name === 'main' ? 'flex' : 'none';
 
-  // Update search bar visibility
-  document.getElementById('search-bar').style.opacity = name === 'main' ? '1' : '0.4';
+  // Update search + hashtag filter bar visibility
+  document.getElementById('search-filter-bar').style.opacity = name === 'main' ? '1' : '0.4';
   document.getElementById('search-input').disabled = name !== 'main';
 
   // Update nav links
@@ -955,8 +1219,10 @@ function showView(name) {
 
   if (name === 'bible') {
     renderBibleChapter();
-    document.getElementById('search-bar').style.opacity = '0';
+    document.getElementById('search-filter-bar').style.display = 'none';
     document.getElementById('search-input').disabled = true;
+  } else {
+    document.getElementById('search-filter-bar').style.display = 'flex';
   }
 }
 
@@ -1044,9 +1310,25 @@ function onBibleBookChange() {
 function populateBibleTranslations() {
   if (!window.BibleEngine) return;
   const sel = document.getElementById('bible-translation-select');
-  sel.innerHTML = BibleEngine.listTranslations().map(t =>
+  const translations = BibleEngine.listTranslations();
+  sel.innerHTML = translations.map(t =>
     `<option value="${t.id}" ${t.active ? 'selected' : ''}>${t.shortName} — ${t.name}</option>`
   ).join('');
+  updateNavTranslationState(translations.length);
+}
+
+function updateNavTranslationState(translationCount) {
+  const badge = document.getElementById('nav-translation');
+  if (!badge) return;
+  if (translationCount > 1) {
+    badge.style.cursor = 'pointer';
+    badge.style.opacity = '1';
+    badge.onclick = () => showView('bible');
+  } else {
+    badge.style.cursor = 'default';
+    badge.style.opacity = '0.7';
+    badge.onclick = null;
+  }
 }
 
 function onTranslationChange() {
@@ -1054,6 +1336,77 @@ function onTranslationChange() {
   BibleEngine.setActiveTranslation(tid);
   document.getElementById('nav-translation').textContent = tid;
   renderBibleChapter();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VERSE REFERENCE DETECTION (in note content)
+════════════════════════════════════════════════════════════════ */
+let verseRefRegex = null;
+let verseNameToId = {};
+
+function buildVerseRefIndex() {
+  if (!window.BibleEngine) return;
+  const books = [...BibleEngine.getTestament('OT'), ...BibleEngine.getTestament('NT')];
+  if (!books.length) return;
+
+  verseNameToId = {};
+  books.forEach(b => { verseNameToId[b.name.toLowerCase()] = b.id; });
+
+  const escapedNames = books
+    .map(b => b.name)
+    .sort((a, b) => b.length - a.length)
+    .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  verseRefRegex = new RegExp(
+    '\\b(' + escapedNames.join('|') + ')\\s+(\\d{1,3})\\s*:\\s*(\\d{1,3})(?:\\s*[-–]\\s*(\\d{1,3}))?\\b',
+    'gi'
+  );
+}
+
+function linkifyVerseRefs(text) {
+  const escaped = escHtml(text || '');
+  if (!verseRefRegex) return escaped;
+  return escaped.replace(verseRefRegex, (match, bookName, chapter, v1, v2) => {
+    const bookId = verseNameToId[bookName.toLowerCase()];
+    if (!bookId) return match;
+    const ref = v2 ? `${bookId}:${chapter}:${v1}-${v2}` : `${bookId}:${chapter}:${v1}`;
+    return `<span class="verse-ref-link" onclick="openVerseRefModal('${ref}')">${match}</span>`;
+  });
+}
+
+function openVerseRefModal(ref) {
+  if (!window.BibleEngine) return;
+  const [bookId, chapterStr, verseRange] = ref.split(':');
+  const chapter = parseInt(chapterStr, 10);
+  let vStart, vEnd;
+  if (verseRange.includes('-')) {
+    [vStart, vEnd] = verseRange.split('-').map(Number);
+  } else {
+    vStart = vEnd = parseInt(verseRange, 10);
+  }
+
+  const book = BibleEngine.findBook(bookId);
+  let text = '';
+  let translation = '';
+  for (let v = vStart; v <= vEnd; v++) {
+    const verse = BibleEngine.getVerse(bookId, chapter, v);
+    if (!verse) continue;
+    translation = verse.translation;
+    text += (vEnd > vStart ? `${v} ` : '') + verse.text + ' ';
+  }
+
+  const refLabel = vEnd > vStart
+    ? `${book ? book.name : bookId} ${chapter}:${vStart}-${vEnd}`
+    : `${book ? book.name : bookId} ${chapter}:${vStart}`;
+
+  document.getElementById('verse-ref-modal-title').textContent =
+    translation ? `${refLabel} (${translation})` : refLabel;
+  document.getElementById('verse-ref-modal-text').textContent = text.trim() || 'Verse not found.';
+  document.getElementById('verse-ref-modal').style.display = 'flex';
+}
+
+function closeVerseRefModal() {
+  document.getElementById('verse-ref-modal').style.display = 'none';
 }
 
 function renderBibleChapter() {
@@ -1129,7 +1482,7 @@ function addVerseToNote() {
   const { bookId, chapter, verse } = selectedVerseRef;
   const v = BibleEngine.getVerse(bookId, chapter, verse);
   closeVersePopover();
-  openNoteModal();
+  openNoteEditor();
   setTimeout(() => {
     const ta = document.getElementById('note-content-input');
     const ref = `\n[${v.reference} — ${v.translation}]\n${v.text}\n`;
@@ -1140,37 +1493,32 @@ function addVerseToNote() {
 /* ═══════════════════════════════════════════════════════════════
    NOTES: CRUD
 ════════════════════════════════════════════════════════════════ */
-function openNoteModal(noteId = null) {
+function openNoteEditor(noteId = null) {
   editingNoteId = noteId;
   currentTags = [];
 
   if (noteId) {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
-    document.getElementById('modal-title-label').textContent = 'Edit Note';
     document.getElementById('note-title-input').value = note.title || '';
     document.getElementById('note-content-input').value = note.content || '';
     currentTags = [...(note.tags || [])];
   } else {
-    document.getElementById('modal-title-label').textContent = 'New Note';
     document.getElementById('note-title-input').value = '';
     document.getElementById('note-content-input').value = '';
     currentTags = [];
   }
 
   renderTagChips();
-  document.getElementById('note-modal').style.display = 'flex';
+  document.getElementById('note-view-page').classList.remove('open');
+  document.getElementById('note-editor-page').classList.add('open');
   setTimeout(() => document.getElementById('note-title-input').focus(), 80);
 }
 
-function closeNoteModal() {
-  document.getElementById('note-modal').style.display = 'none';
+function closeNoteEditor() {
+  document.getElementById('note-editor-page').classList.remove('open');
   editingNoteId = null;
   currentTags = [];
-}
-
-function handleModalBackdropClick(e) {
-  if (e.target === document.getElementById('note-modal')) closeNoteModal();
 }
 
 async function saveNote() {
@@ -1178,7 +1526,7 @@ async function saveNote() {
   const content = document.getElementById('note-content-input').value.trim();
   if (!title) { toast('Please enter a title.'); document.getElementById('note-title-input').focus(); return; }
 
-  const saveBtn = document.querySelector('#note-modal .btn-primary');
+  const saveBtn = document.querySelector('#note-editor-page .btn-primary');
   saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
 
   try {
@@ -1197,7 +1545,7 @@ async function saveNote() {
       if (!useFirestore) notes.unshift(saved);
       toast('Note saved!');
     }
-    closeNoteModal();
+    closeNoteEditor();
     if (!useFirestore) renderNotes();
   } catch (e) {
     toast('Error saving: ' + e.message);
@@ -1206,7 +1554,7 @@ async function saveNote() {
   }
 }
 
-async function softDeleteNote(id) {
+async function softDeleteNote(id, silent = false) {
   const deletedAt = new Date().toISOString();
   await dbUpdate(id, { isDeleted: true, deletedAt });
   const note = notes.find(n => n.id === id);
@@ -1215,6 +1563,7 @@ async function softDeleteNote(id) {
     notes = notes.filter(n => n.id !== id);
     recycledNotes.unshift(note);
   }
+  if (silent) return;
   renderNotes();
   renderRecycleBin();
   updateRecycleBadge();
@@ -1248,7 +1597,7 @@ function confirmDeleteNote(id) {
     '🗑️', 'Move to Recycle Bin',
     'This note will be soft-deleted and recoverable for 30 days.',
     'Move to Bin',
-    () => { softDeleteNote(id); closeNoteDetailModal(); }
+    () => { softDeleteNote(id); closeNoteView(); }
   );
 }
 
@@ -1277,45 +1626,117 @@ function confirmEmptyRecycleBin() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   NOTE DETAIL MODAL
+   NOTE VIEWER (full-screen, read-only)
 ════════════════════════════════════════════════════════════════ */
+function renderNoteViewPage(data) {
+  document.getElementById('detail-title').textContent = data.title || 'Untitled Sermon';
+  document.getElementById('detail-tags').innerHTML = (data.tags || []).map(t =>
+    `<span class="tag">${escHtml(t)}</span>`
+  ).join('');
+  document.getElementById('detail-meta').textContent = `Created ${formatDate(data.createdAt)}`;
+
+  const contentEl = document.getElementById('detail-content');
+  if (data.content && data.content.trim()) {
+    contentEl.innerHTML = linkifyVerseRefs(data.content);
+    contentEl.classList.remove('empty');
+  } else {
+    contentEl.textContent = 'No content.';
+    contentEl.classList.add('empty');
+  }
+
+  document.getElementById('note-view-page').classList.remove('focus-mode');
+  document.getElementById('detail-delete-row').style.display = currentDetailNoteId ? 'flex' : 'none';
+}
+
 function openNoteDetail(id) {
   const note = notes.find(n => n.id === id);
   if (!note) return;
   currentDetailNoteId = id;
-  document.getElementById('detail-title').textContent = note.title;
-  document.getElementById('detail-tags').innerHTML = (note.tags || []).map(t =>
-    `<span class="tag">${escHtml(t)}</span>`
-  ).join('');
-  document.getElementById('detail-content').textContent = note.content;
-  document.getElementById('detail-meta').textContent = `Created: ${formatDate(note.createdAt)}`;
-  document.getElementById('note-detail-modal').style.display = 'flex';
+  viewingDraft = null;
+  viewReturnTarget = 'main';
+  renderNoteViewPage(note);
+  document.getElementById('note-editor-page').classList.remove('open');
+  document.getElementById('note-view-page').classList.add('open');
 }
 
-function closeNoteDetailModal() {
-  document.getElementById('note-detail-modal').style.display = 'none';
+function viewFromEditor() {
+  const draft = {
+    title: document.getElementById('note-title-input').value.trim(),
+    content: document.getElementById('note-content-input').value.trim(),
+    tags: currentTags,
+    createdAt: (editingNoteId && notes.find(n => n.id === editingNoteId)?.createdAt) || new Date().toISOString()
+  };
+  currentDetailNoteId = editingNoteId;
+  viewingDraft = draft;
+  viewReturnTarget = 'editor';
+  renderNoteViewPage(draft);
+  document.getElementById('note-editor-page').classList.remove('open');
+  document.getElementById('note-view-page').classList.add('open');
+}
+
+function closeNoteView() {
+  document.getElementById('note-view-page').classList.remove('open');
+  if (viewReturnTarget === 'editor') {
+    document.getElementById('note-editor-page').classList.add('open');
+  }
   currentDetailNoteId = null;
+  viewingDraft = null;
 }
 
 function editCurrentDetailNote() {
-  closeNoteDetailModal();
-  setTimeout(() => openNoteModal(currentDetailNoteId || editingNoteId), 50);
+  if (viewReturnTarget === 'editor') {
+    // Already have the editor's fields intact — just swap the page back.
+    document.getElementById('note-view-page').classList.remove('open');
+    document.getElementById('note-editor-page').classList.add('open');
+    return;
+  }
+  const id = currentDetailNoteId;
+  document.getElementById('note-view-page').classList.remove('open');
+  openNoteEditor(id);
 }
 
 function deleteCurrentDetailNote() {
   const id = currentDetailNoteId;
-  closeNoteDetailModal();
-  setTimeout(() => confirmDeleteNote(id), 80);
+  if (!id) return;
+  confirmDeleteNote(id);
+}
+
+function toggleNoteReadingFocus() {
+  document.getElementById('note-view-page').classList.toggle('focus-mode');
+}
+
+async function shareNoteData(data) {
+  if (!data) return;
+  const shareText = `${data.title || 'Untitled Sermon'}\n\n${data.content || ''}`;
+  if (navigator.share) {
+    try { await navigator.share({ title: data.title || 'Untitled Sermon', text: shareText }); }
+    catch (e) { /* user cancelled share — no-op */ }
+  } else {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast('Note copied to clipboard!');
+    } catch (e) {
+      toast('Unable to share on this device.');
+    }
+  }
+}
+
+async function shareCurrentNote() {
+  const data = currentDetailNoteId ? notes.find(n => n.id === currentDetailNoteId) : viewingDraft;
+  shareNoteData(data);
 }
 
 /* ═══════════════════════════════════════════════════════════════
    RENDER: NOTES GRID
 ════════════════════════════════════════════════════════════════ */
 function renderNotes(subset = null) {
-  const list = subset !== null ? subset : notes;
+  const raw = subset !== null ? subset : notes;
+  const list = [...raw].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   const grid = document.getElementById('notes-grid');
   const empty = document.getElementById('main-empty');
   document.getElementById('notes-count').textContent = `${list.length} note${list.length !== 1 ? 's' : ''}`;
+
+  renderHashtagFilters();
 
   if (list.length === 0) {
     grid.innerHTML = '';
@@ -1327,30 +1748,188 @@ function renderNotes(subset = null) {
 }
 
 function buildNoteCard(n) {
-  const tags = (n.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
-  const preview = (n.content || '').slice(0, 160).replace(/\n/g, ' ');
+  const preview = (n.content || '').trim().slice(0, 160).replace(/\n/g, ' ');
+  const previewHtml = preview
+    ? escHtml(preview)
+    : '<span class="card-content-empty">No additional text…</span>';
+  const isSelected = selectionMode && selectedNoteIds.has(n.id);
   return `
-    <div class="note-card" onclick="openNoteDetail('${n.id}')">
+    <div class="note-card${isSelected ? ' selected' : ''}" data-note-id="${n.id}">
+      ${selectionMode ? `
+        <div class="card-select-check">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20,6 9,17 4,12"/>
+          </svg>
+        </div>
+      ` : ''}
       <div class="card-title">${escHtml(n.title)}</div>
-      ${tags ? `<div class="card-tags">${tags}</div>` : ''}
-      <div class="card-content">${escHtml(preview)}</div>
-      <div class="card-meta">${formatDate(n.createdAt)}</div>
-      <div class="card-actions" onclick="event.stopPropagation()">
-        <div class="icon-btn" onclick="openNoteModal('${n.id}')" title="Edit">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </div>
-        <div class="icon-btn danger" onclick="confirmDeleteNote('${n.id}')" title="Delete">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-          </svg>
-        </div>
-      </div>
+      <div class="card-content">${previewHtml}</div>
+      <div class="card-divider"></div>
+      <div class="card-date-pill">${formatDateShort(n.createdAt)}</div>
     </div>
   `;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTE GRID: tap / long-press / right-click interactions
+════════════════════════════════════════════════════════════════ */
+function setupNoteGridInteractions() {
+  const grid = document.getElementById('notes-grid');
+  if (!grid || grid.dataset.interactionsBound) return;
+  grid.dataset.interactionsBound = '1';
+
+  let pressTimer = null;
+  let longPressFired = false;
+  let startX = 0, startY = 0;
+
+  const getCardId = (target) => {
+    const card = target.closest ? target.closest('.note-card') : null;
+    return card ? card.dataset.noteId : null;
+  };
+
+  const startPress = (target, x, y) => {
+    const id = getCardId(target);
+    if (!id || selectionMode) return;
+    longPressFired = false;
+    startX = x; startY = y;
+    pressTimer = setTimeout(() => {
+      longPressFired = true;
+      if (navigator.vibrate) navigator.vibrate(12);
+      openNoteActionSheet(id);
+    }, 500);
+  };
+  const cancelPress = () => { clearTimeout(pressTimer); };
+  const movePress = (x, y) => {
+    if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) cancelPress();
+  };
+
+  grid.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startPress(e.target, t.clientX, t.clientY);
+  }, { passive: true });
+  grid.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    movePress(t.clientX, t.clientY);
+  }, { passive: true });
+  grid.addEventListener('touchend', cancelPress);
+  grid.addEventListener('touchcancel', cancelPress);
+
+  grid.addEventListener('mousedown', e => startPress(e.target, e.clientX, e.clientY));
+  grid.addEventListener('mousemove', e => { if (pressTimer) movePress(e.clientX, e.clientY); });
+  grid.addEventListener('mouseup', cancelPress);
+  grid.addEventListener('mouseleave', cancelPress);
+
+  grid.addEventListener('contextmenu', e => {
+    if (selectionMode) return;
+    const id = getCardId(e.target);
+    if (id) { e.preventDefault(); openNoteActionSheet(id); }
+  });
+
+  grid.addEventListener('click', e => {
+    if (longPressFired) { longPressFired = false; return; }
+    const id = getCardId(e.target);
+    if (!id) return;
+    if (selectionMode) { toggleNoteSelection(id); }
+    else { openNoteDetail(id); }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NOTE ACTION SHEET (long-press)
+════════════════════════════════════════════════════════════════ */
+function openNoteActionSheet(id) {
+  const note = notes.find(n => n.id === id);
+  if (!note) return;
+  actionSheetNoteId = id;
+  document.getElementById('action-sheet-title').textContent = note.title || 'Untitled Sermon';
+  document.getElementById('action-sheet-pin-label').textContent = note.pinned ? 'Unpin from Top' : 'Pin to Top';
+  document.getElementById('note-action-sheet').classList.add('open');
+}
+
+function closeNoteActionSheet() {
+  document.getElementById('note-action-sheet').classList.remove('open');
+  actionSheetNoteId = null;
+}
+
+function actionSheetSelectMultiple() {
+  const id = actionSheetNoteId;
+  closeNoteActionSheet();
+  enterSelectionMode(id);
+}
+
+async function actionSheetTogglePin() {
+  const id = actionSheetNoteId;
+  const note = notes.find(n => n.id === id);
+  closeNoteActionSheet();
+  if (!note) return;
+  const pinned = !note.pinned;
+  try {
+    await dbUpdate(id, { pinned });
+    note.pinned = pinned;
+    renderNotes();
+    toast(pinned ? 'Pinned to top.' : 'Unpinned.');
+  } catch (e) {
+    toast('Error updating pin: ' + e.message);
+  }
+}
+
+function actionSheetShare() {
+  const note = notes.find(n => n.id === actionSheetNoteId);
+  closeNoteActionSheet();
+  if (note) shareNoteData(note);
+}
+
+function actionSheetDelete() {
+  const id = actionSheetNoteId;
+  closeNoteActionSheet();
+  setTimeout(() => confirmDeleteNote(id), 80);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MULTI-SELECT MODE
+════════════════════════════════════════════════════════════════ */
+function enterSelectionMode(initialId) {
+  selectionMode = true;
+  selectedNoteIds = new Set(initialId ? [initialId] : []);
+  document.getElementById('selection-toolbar').style.display = 'flex';
+  updateSelectionToolbar();
+  renderNotes();
+}
+
+function exitSelectionMode() {
+  selectionMode = false;
+  selectedNoteIds.clear();
+  document.getElementById('selection-toolbar').style.display = 'none';
+  renderNotes();
+}
+
+function toggleNoteSelection(id) {
+  if (selectedNoteIds.has(id)) selectedNoteIds.delete(id);
+  else selectedNoteIds.add(id);
+  updateSelectionToolbar();
+  renderNotes();
+}
+
+function updateSelectionToolbar() {
+  const count = selectedNoteIds.size;
+  document.getElementById('selection-count').textContent = `${count} selected`;
+}
+
+function bulkDeleteSelected() {
+  if (!selectedNoteIds.size) return;
+  const ids = [...selectedNoteIds];
+  showConfirm(
+    '🗑️', 'Move to Recycle Bin',
+    `${ids.length} note${ids.length !== 1 ? 's' : ''} will be moved to the Recycle Bin.`,
+    'Move to Bin',
+    async () => {
+      for (const id of ids) { await softDeleteNote(id, true); }
+      renderRecycleBin();
+      updateRecycleBadge();
+      exitSelectionMode();
+      toast(`${ids.length} note${ids.length !== 1 ? 's' : ''} moved to Recycle Bin.`);
+    }
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1425,13 +2004,54 @@ function updateRecycleBadge() {
 ════════════════════════════════════════════════════════════════ */
 function filterNotes() {
   const q = document.getElementById('search-input').value.trim().toLowerCase();
-  if (!q) { renderNotes(); return; }
-  const filtered = notes.filter(n =>
-    (n.title || '').toLowerCase().includes(q) ||
-    (n.content || '').toLowerCase().includes(q) ||
-    (n.tags || []).some(t => t.toLowerCase().includes(q))
-  );
-  renderNotes(filtered);
+  let list = notes;
+
+  if (activeTagFilter) {
+    list = list.filter(n => (n.tags || []).some(t => t.toLowerCase() === activeTagFilter.toLowerCase()));
+  }
+  if (q) {
+    list = list.filter(n =>
+      (n.title || '').toLowerCase().includes(q) ||
+      (n.content || '').toLowerCase().includes(q) ||
+      (n.tags || []).some(t => t.toLowerCase().includes(q))
+    );
+  }
+  renderNotes(list);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HASHTAG FILTER BAR
+════════════════════════════════════════════════════════════════ */
+function renderHashtagFilters() {
+  const bar = document.getElementById('hashtag-filter-bar');
+  if (!bar) return;
+
+  const tagSet = new Set();
+  notes.forEach(n => (n.tags || []).forEach(t => t && tagSet.add(t)));
+  const tags = Array.from(tagSet).sort((a, b) => a.localeCompare(b));
+
+  if (tags.length === 0) {
+    bar.innerHTML = '';
+    activeTagFilter = null;
+    return;
+  }
+
+  const allChip = `<span class="hashtag-chip${activeTagFilter ? '' : ' active'}" onclick="toggleTagFilter('')">All Notes</span>`;
+  const tagChips = tags.map(t => `
+    <span class="hashtag-chip${activeTagFilter && activeTagFilter.toLowerCase() === t.toLowerCase() ? ' active' : ''}"
+      onclick="toggleTagFilter('${encodeURIComponent(t)}')">#${escHtml(t)}</span>
+  `).join('');
+  bar.innerHTML = allChip + tagChips;
+}
+
+function toggleTagFilter(encodedTag) {
+  if (!encodedTag) {
+    activeTagFilter = null;
+  } else {
+    const tag = decodeURIComponent(encodedTag);
+    activeTagFilter = (activeTagFilter && activeTagFilter.toLowerCase() === tag.toLowerCase()) ? null : tag;
+  }
+  filterNotes();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1557,6 +2177,13 @@ function formatDate(val) {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function formatDateShort(val) {
+  if (!val) return '';
+  const d = val.toDate ? val.toDate() : new Date(val);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }).toUpperCase();
+}
+
 function getDaysLeft(deletedAt) {
   if (!deletedAt) return 30;
   const d = deletedAt.toDate ? deletedAt.toDate() : new Date(deletedAt);
@@ -1571,14 +2198,20 @@ function getDaysLeft(deletedAt) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeVersePopover();
-    closeNoteModal();
-    closeNoteDetailModal();
+    closeVerseRefModal();
+    closeNoteActionSheet();
+    if (document.getElementById('note-view-page').classList.contains('open')) {
+      closeNoteView();
+    } else if (document.getElementById('note-editor-page').classList.contains('open')) {
+      closeNoteEditor();
+    }
+    if (selectionMode) exitSelectionMode();
     closeConfirm();
     closeSidenav();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'n' && currentView === 'main') {
     e.preventDefault();
-    openNoteModal();
+    openNoteEditor();
   }
 });
 
