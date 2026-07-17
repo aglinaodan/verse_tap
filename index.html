@@ -215,6 +215,13 @@
     }
     .note-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
     .note-card:active { transform: scale(0.985); }
+    .card-pin-badge {
+      position: absolute; top: -0.5rem; right: 0.9rem;
+      width: 1.6rem; height: 1.6rem; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    }
     .note-card .card-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
     .note-card .card-tags-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.65rem; }
     .card-tag-pill {
@@ -281,6 +288,32 @@
     }
     #fab:hover { background: var(--accent-dark); transform: scale(1.07); }
     #fab:active { transform: scale(0.94); }
+
+    #selection-fab-group {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      display: none; align-items: center; gap: 0.75rem; z-index: 40;
+    }
+    #selection-fab-group.show { display: flex; }
+    #fab-cancel, #fab-delete {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: none; cursor: pointer; transition: background 0.15s, transform 0.15s;
+    }
+    #fab-cancel {
+      background: var(--bg-card); color: var(--text-secondary);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+    }
+    #fab-cancel:hover { color: var(--text-primary); border-color: var(--text-muted); }
+    #fab-cancel:active { transform: scale(0.94); }
+    #fab-delete {
+      background: var(--danger, #ef4444); color: #fff;
+      box-shadow: 0 4px 20px rgba(239,68,68,0.45);
+    }
+    #fab-delete:hover { background: var(--danger-dark, #dc2626); transform: scale(1.07); }
+    #fab-delete:active { transform: scale(0.94); }
+    #fab-delete:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+    #fab-delete:disabled:hover { transform: none; background: var(--danger, #ef4444); }
 
     /* ── Modal ── */
     .modal-backdrop {
@@ -898,10 +931,6 @@
       </div>
       <div id="selection-toolbar">
         <span class="sel-count" id="selection-count">0 selected</span>
-        <div class="sel-actions">
-          <button class="btn btn-danger" onclick="bulkDeleteSelected()">Delete</button>
-          <button class="btn btn-ghost" onclick="exitSelectionMode()">Cancel</button>
-        </div>
       </div>
       <div id="notes-grid"></div>
       <div id="main-empty" class="empty-state" style="display:none;">
@@ -970,6 +999,19 @@
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
   </svg>
 </button>
+
+<div id="selection-fab-group">
+  <button id="fab-cancel" onclick="exitSelectionMode()" aria-label="Cancel selection" title="Cancel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+  <button id="fab-delete" onclick="bulkDeleteSelected()" aria-label="Delete selected notes" title="Delete selected">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+    </svg>
+  </button>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════════
      NOTE EDITOR (full-screen page)
@@ -1234,8 +1276,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -2197,6 +2239,14 @@ function buildNoteCard(n) {
   const wasEdited = !!(n.updatedAt && n.updatedAt !== n.createdAt);
   return `
     <div class="note-card${isSelected ? ' selected' : ''}" data-note-id="${n.id}">
+      ${n.pinned ? `
+        <div class="card-pin-badge" title="Pinned">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 17v5"/>
+            <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+          </svg>
+        </div>
+      ` : ''}
       ${selectionMode ? `
         <div class="card-select-check">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -2301,12 +2351,21 @@ function actionSheetSelectMultiple() {
   enterSelectionMode(id);
 }
 
+const MAX_PINNED_NOTES = 5;
+
 async function actionSheetTogglePin() {
   const id = actionSheetNoteId;
   const note = notes.find(n => n.id === id);
   closeNoteActionSheet();
   if (!note) return;
   const pinned = !note.pinned;
+  if (pinned) {
+    const pinnedCount = notes.filter(n => n.pinned).length;
+    if (pinnedCount >= MAX_PINNED_NOTES) {
+      toast(`You can only pin up to ${MAX_PINNED_NOTES} notes. Unpin one first.`);
+      return;
+    }
+  }
   try {
     await dbUpdate(id, { pinned });
     note.pinned = pinned;
@@ -2336,6 +2395,8 @@ function enterSelectionMode(initialId) {
   selectionMode = true;
   selectedNoteIds = new Set(initialId ? [initialId] : []);
   document.getElementById('selection-toolbar').style.display = 'flex';
+  document.getElementById('fab').style.display = 'none';
+  document.getElementById('selection-fab-group').classList.add('show');
   updateSelectionToolbar();
   renderNotes();
 }
@@ -2344,6 +2405,8 @@ function exitSelectionMode() {
   selectionMode = false;
   selectedNoteIds.clear();
   document.getElementById('selection-toolbar').style.display = 'none';
+  document.getElementById('fab').style.display = 'flex';
+  document.getElementById('selection-fab-group').classList.remove('show');
   renderNotes();
 }
 
@@ -2357,6 +2420,7 @@ function toggleNoteSelection(id) {
 function updateSelectionToolbar() {
   const count = selectedNoteIds.size;
   document.getElementById('selection-count').textContent = `${count} selected`;
+  document.getElementById('fab-delete').disabled = count === 0;
 }
 
 function bulkDeleteSelected() {
