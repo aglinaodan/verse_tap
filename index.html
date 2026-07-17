@@ -1009,14 +1009,6 @@
     </div>
     <div class="note-page-content-display" id="detail-content"></div>
   </div>
-  <div class="note-page-footer" id="detail-delete-row">
-    <button class="btn btn-danger" onclick="deleteCurrentDetailNote()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-        <polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-      </svg>
-      Delete
-    </button>
-  </div>
   <div class="focus-exit-btn" onclick="toggleNoteReadingFocus()" title="Exit focus mode">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="9,3 9,9 3,9"/><polyline points="15,21 15,15 21,15"/>
@@ -1200,8 +1192,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1817,6 +1809,19 @@ function closeNoteEditor() {
   currentTags = [];
 }
 
+// Adds or replaces a note in the in-memory `notes` array by id. Used for the
+// optimistic UI update right after a save, instead of a blind unshift/push —
+// this matters in cloud mode, where the Firestore real-time listener can
+// receive its own echo of the same write (via the local pending-write cache)
+// either before or after this code runs. A blind unshift would add a second,
+// duplicate card in that case; upserting by id keeps it to a single entry
+// either way.
+function upsertLocalNote(note) {
+  const idx = notes.findIndex(n => n.id === note.id);
+  if (idx !== -1) notes[idx] = note;
+  else notes.unshift(note);
+}
+
 async function saveNote() {
   const title = document.getElementById('note-title-input').value.trim();
   const content = document.getElementById('note-content-input').value.trim();
@@ -1829,8 +1834,8 @@ async function saveNote() {
     if (editingNoteId) {
       const updatedAt = new Date().toISOString();
       await dbUpdate(editingNoteId, { title, content, tags: currentTags, updatedAt });
-      const idx = notes.findIndex(n => n.id === editingNoteId);
-      if (idx !== -1) notes[idx] = { ...notes[idx], title, content, tags: currentTags, updatedAt };
+      const existing = notes.find(n => n.id === editingNoteId);
+      upsertLocalNote({ ...existing, id: editingNoteId, title, content, tags: currentTags, updatedAt });
       toast('Note updated!');
     } else {
       const now = new Date().toISOString();
@@ -1840,7 +1845,7 @@ async function saveNote() {
         isDeleted: false, deletedAt: null
       };
       const saved = await dbAdd(newNote);
-      notes.unshift(saved);
+      upsertLocalNote(saved);
       toast('Note saved!');
     }
     closeNoteEditor();
@@ -1950,7 +1955,6 @@ function renderNoteViewPage(data) {
   }
 
   document.getElementById('note-view-page').classList.remove('focus-mode');
-  document.getElementById('detail-delete-row').style.display = currentDetailNoteId ? 'flex' : 'none';
 }
 
 function filterByTagFromViewer(encodedTag) {
@@ -2015,12 +2019,6 @@ function editCurrentDetailNote() {
   const id = currentDetailNoteId;
   document.getElementById('note-view-page').classList.remove('open');
   openNoteEditor(id);
-}
-
-function deleteCurrentDetailNote() {
-  const id = currentDetailNoteId;
-  if (!id) return;
-  confirmDeleteNote(id);
 }
 
 function toggleNoteReadingFocus() {
