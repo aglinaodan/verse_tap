@@ -1192,8 +1192,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1398,6 +1398,8 @@ async function initApp() {
   notes = remaining.filter(n => !n.isDeleted);
   recycledNotes = remaining.filter(n => n.isDeleted);
 
+  await seedSampleNotesIfFirstLaunch();
+
   renderNotes();
   renderRecycleBin();
   updateRecycleBadge();
@@ -1405,6 +1407,38 @@ async function initApp() {
 
   // Real-time listener (Firestore only)
   attachFirestoreListener();
+}
+
+const SEEDED_FLAG_KEY = 'sn_seeded_v1';
+
+// Populates two example notes on the very first launch only (tracked by a
+// one-time flag, not by "notes list is empty" — so deleting all your notes
+// later won't bring the samples back).
+async function seedSampleNotesIfFirstLaunch() {
+  if (localStorage.getItem(SEEDED_FLAG_KEY) === '1') return;
+  localStorage.setItem(SEEDED_FLAG_KEY, '1');
+  if (notes.length > 0 || recycledNotes.length > 0) return; // not actually a fresh install
+
+  const now1 = new Date('2026-07-16T09:00:00').toISOString();
+  const sample1 = await dbAdd({
+    title: 'Untitled Sermon',
+    content: 'Genesis 1:1',
+    tags: [],
+    createdAt: now1, updatedAt: now1,
+    isDeleted: false, deletedAt: null
+  });
+  notes.unshift(sample1);
+
+  const now2 = new Date('2026-07-15T09:00:00').toISOString();
+  const sample2 = await dbAdd({
+    title: 'The Word as a Lamp — Sermon Study',
+    content: 'The Word as a Lamp\n\nA study from Psalm 119:105\n\n' +
+      "The psalmist doesn't say the Word is a floodlight. It's a lamp — enough light for the next step, not the whole road. Ministry is often this way. You don't need to see the entire journey. You need enough light to place your foot faithfully on the next stone.",
+    tags: ['Sample', 'Welcome'],
+    createdAt: now2, updatedAt: now2,
+    isDeleted: false, deletedAt: null
+  });
+  notes.unshift(sample2);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1569,7 +1603,7 @@ function buildVerseRefIndex() {
     .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
   verseRefRegex = new RegExp(
-    '\\b(' + escapedNames.join('|') + ')\\s+(\\d{1,3})\\s*:\\s*(\\d{1,3})(?:\\s*[-–]\\s*(\\d{1,3}))?\\b',
+    '\\b(' + escapedNames.join('|') + ')\\s+(\\d{1,3})(?:\\s*:\\s*(\\d{1,3})(?:\\s*[-–]\\s*(\\d{1,3}))?)?\\b',
     'gi'
   );
 }
@@ -1580,7 +1614,15 @@ function linkifyVerseRefs(text) {
   return escaped.replace(verseRefRegex, (match, bookName, chapter, v1, v2) => {
     const bookId = verseNameToId[bookName.toLowerCase()];
     if (!bookId) return match;
-    const ref = v2 ? `${bookId}:${chapter}:${v1}-${v2}` : `${bookId}:${chapter}:${v1}`;
+    // No verse given at all → chapter-only reference (e.g. "Genesis 1")
+    let ref;
+    if (v1 === undefined) {
+      ref = `${bookId}:${chapter}`;
+    } else if (v2 !== undefined) {
+      ref = `${bookId}:${chapter}:${v1}-${v2}`;
+    } else {
+      ref = `${bookId}:${chapter}:${v1}`;
+    }
     return `<span class="verse-ref-link" onclick="openVerseRefModal('${ref}')">${match}</span>`;
   });
 }
@@ -1589,26 +1631,36 @@ function openVerseRefModal(ref) {
   if (!window.BibleEngine) return;
   const [bookId, chapterStr, verseRange] = ref.split(':');
   const chapter = parseInt(chapterStr, 10);
-  let vStart, vEnd;
-  if (verseRange.includes('-')) {
-    [vStart, vEnd] = verseRange.split('-').map(Number);
-  } else {
-    vStart = vEnd = parseInt(verseRange, 10);
-  }
-
   const book = BibleEngine.findBook(bookId);
   let text = '';
   let translation = '';
-  for (let v = vStart; v <= vEnd; v++) {
-    const verse = BibleEngine.getVerse(bookId, chapter, v);
-    if (!verse) continue;
-    translation = verse.translation;
-    text += (vEnd > vStart ? `${v} ` : '') + verse.text + ' ';
-  }
+  let refLabel;
 
-  const refLabel = vEnd > vStart
-    ? `${book ? book.name : bookId} ${chapter}:${vStart}-${vEnd}`
-    : `${book ? book.name : bookId} ${chapter}:${vStart}`;
+  if (verseRange === undefined) {
+    // Chapter-only reference (e.g. "Genesis 1") — show the whole chapter
+    const verses = BibleEngine.getChapter(bookId, chapter) || [];
+    verses.forEach(v => {
+      translation = v.translation || translation;
+      text += `${v.verse} ${v.text} `;
+    });
+    refLabel = `${book ? book.name : bookId} ${chapter}`;
+  } else {
+    let vStart, vEnd;
+    if (verseRange.includes('-')) {
+      [vStart, vEnd] = verseRange.split('-').map(Number);
+    } else {
+      vStart = vEnd = parseInt(verseRange, 10);
+    }
+    for (let v = vStart; v <= vEnd; v++) {
+      const verse = BibleEngine.getVerse(bookId, chapter, v);
+      if (!verse) continue;
+      translation = verse.translation;
+      text += (vEnd > vStart ? `${v} ` : '') + verse.text + ' ';
+    }
+    refLabel = vEnd > vStart
+      ? `${book ? book.name : bookId} ${chapter}:${vStart}-${vEnd}`
+      : `${book ? book.name : bookId} ${chapter}:${vStart}`;
+  }
 
   document.getElementById('verse-ref-modal-title').textContent =
     translation ? `${refLabel} (${translation})` : refLabel;
@@ -2367,12 +2419,14 @@ function renderHashtagFilters() {
   bar.innerHTML = allChip + tagChips;
 }
 
+// Clicking a tag chip filters to that tag and keeps it active on repeat
+// clicks — it never clears itself. Only the "All Notes" chip (passed as an
+// empty string) clears the active filter back to showing everything.
 function toggleTagFilter(encodedTag) {
   if (!encodedTag) {
     activeTagFilter = null;
   } else {
-    const tag = decodeURIComponent(encodedTag);
-    activeTagFilter = (activeTagFilter && activeTagFilter.toLowerCase() === tag.toLowerCase()) ? null : tag;
+    activeTagFilter = decodeURIComponent(encodedTag);
   }
   filterNotes();
 }
