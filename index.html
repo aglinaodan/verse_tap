@@ -653,6 +653,34 @@
     }
     .view-title { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
 
+    #sort-toggle-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.9rem; height: 1.9rem; padding: 0;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text-muted); cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    #sort-toggle-btn:hover { color: var(--text-primary); border-color: var(--text-muted); }
+    #sort-toggle-btn:active { transform: scale(0.92); }
+    #sort-toggle-btn.active {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+    #sort-menu {
+      position: absolute; top: calc(100% + 0.4rem); right: 0; z-index: 60;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      display: none; flex-direction: column; min-width: 140px; overflow: hidden;
+    }
+    #sort-menu.show { display: flex; }
+    #sort-menu button {
+      background: none; border: none; text-align: left;
+      padding: 0.6rem 0.85rem; font-size: 0.82rem; color: var(--text-secondary);
+      cursor: pointer; transition: background 0.12s ease;
+    }
+    #sort-menu button:hover { background: var(--bg-hover, rgba(255,255,255,0.06)); }
+    #sort-menu button.active { color: var(--accent); font-weight: 700; }
+    #sort-menu button + button { border-top: 1px solid var(--border); }
+
     /* ── Notes grid ── */
     #notes-grid {
       display: grid; gap: 1rem;
@@ -852,7 +880,21 @@
     <div id="view-main" class="view active">
       <div class="view-header">
         <div class="view-title">My Notes</div>
-        <div style="font-size:0.8rem;color:var(--text-muted);" id="notes-count">0 notes</div>
+        <div style="display:flex; align-items:center; gap:0.6rem; position:relative;">
+          <div style="font-size:0.8rem;color:var(--text-muted);" id="notes-count">0 notes</div>
+          <button id="sort-toggle-btn" onclick="toggleSortMenu()" title="Sort notes">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="6" x2="14" y2="6"/><line x1="4" y1="12" x2="11" y2="12"/><line x1="4" y1="18" x2="8" y2="18"/>
+              <path d="M17 4v16"/><polyline points="13,17 17,21 21,17"/>
+            </svg>
+          </button>
+          <div id="sort-menu">
+            <button onclick="setSortMode('newest')" data-mode="newest" class="active">Newest first</button>
+            <button onclick="setSortMode('oldest')" data-mode="oldest">Oldest first</button>
+            <button onclick="setSortMode('az')" data-mode="az">Title A–Z</button>
+            <button onclick="setSortMode('za')" data-mode="za">Title Z–A</button>
+          </div>
+        </div>
       </div>
       <div id="selection-toolbar">
         <span class="sel-count" id="selection-count">0 selected</span>
@@ -1879,6 +1921,17 @@ async function saveNote() {
   const content = document.getElementById('note-content-input').value.trim();
   if (!title) { toast('Please enter a title.'); document.getElementById('note-title-input').focus(); return; }
 
+  // Commit any tag text still sitting in the input box (typed but never
+  // confirmed with Enter/comma) so it isn't silently dropped on save.
+  const tagInput = document.getElementById('tag-input');
+  if (tagInput) {
+    const pending = tagInput.value.trim().replace(/,$/, '');
+    if (pending && !currentTags.includes(pending)) {
+      currentTags.push(pending);
+    }
+    tagInput.value = '';
+  }
+
   const saveBtn = document.querySelector('#note-editor-page .btn-primary');
   saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
 
@@ -2103,7 +2156,17 @@ async function shareCurrentNote() {
 ════════════════════════════════════════════════════════════════ */
 function renderNotes(subset = null) {
   const raw = subset !== null ? subset : notes;
-  const list = [...raw].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+  const list = [...raw].sort((a, b) => {
+    const pinDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+    if (pinDiff !== 0) return pinDiff;
+    switch (noteSortMode) {
+      case 'oldest': return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      case 'az': return (a.title || '').localeCompare(b.title || '');
+      case 'za': return (b.title || '').localeCompare(a.title || '');
+      case 'newest':
+      default: return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    }
+  });
   const grid = document.getElementById('notes-grid');
   const empty = document.getElementById('main-empty');
   document.getElementById('notes-count').textContent = `${list.length} note${list.length !== 1 ? 's' : ''}`;
@@ -2403,6 +2466,37 @@ function filterNotes() {
 /* ═══════════════════════════════════════════════════════════════
    HASHTAG FILTER BAR
 ════════════════════════════════════════════════════════════════ */
+let noteSortMode = 'newest'; // 'newest' | 'oldest' | 'az' | 'za'
+
+function toggleSortMenu() {
+  const menu = document.getElementById('sort-menu');
+  const btn = document.getElementById('sort-toggle-btn');
+  const opening = !menu.classList.contains('show');
+  menu.classList.toggle('show', opening);
+  btn.classList.toggle('active', opening);
+}
+
+function setSortMode(mode) {
+  noteSortMode = mode;
+  document.querySelectorAll('#sort-menu button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  document.getElementById('sort-menu').classList.remove('show');
+  document.getElementById('sort-toggle-btn').classList.remove('active');
+  filterNotes();
+}
+
+// Close the sort menu when tapping anywhere else on the page
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('sort-menu');
+  const btn = document.getElementById('sort-toggle-btn');
+  if (!menu || !btn) return;
+  if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    menu.classList.remove('show');
+    btn.classList.remove('active');
+  }
+});
+
 function renderHashtagFilters() {
   const bar = document.getElementById('hashtag-filter-bar');
   if (!bar) return;
