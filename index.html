@@ -11,7 +11,7 @@
   <script src="esv_version.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     /* ── CSS CUSTOM PROPERTIES (Themes) ── */
     :root {
@@ -94,7 +94,7 @@
       height: 100%;
       background: var(--bg-base);
       color: var(--text-primary);
-      font-family: 'Century Gothic', CenturyGothic, AppleGothic, 'Jost', system-ui, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       font-size: var(--base-font, 16px);
       overflow: hidden;
     }
@@ -522,12 +522,12 @@
     .word { cursor: pointer; }
     .word:hover { background: rgba(255,255,255,0.08); border-radius: 2px; }
     .word.word-selecting { background: rgba(99,102,241,0.4); }
-    .word.hl-word-yellow { background: rgba(234,179,8,0.55); }
-    .word.hl-word-green  { background: rgba(34,197,94,0.5); }
-    .word.hl-word-blue   { background: rgba(59,130,246,0.5); }
-    .word.hl-word-pink   { background: rgba(236,72,153,0.5); }
-    .word.hl-word-white  { background: rgba(255,255,255,0.9); color: #1a1a2e; }
-    .word.hl-word-black  { background: rgba(0,0,0,0.75); }
+    .word.hl-word-yellow { color: #facc15; }
+    .word.hl-word-green  { color: #4ade80; }
+    .word.hl-word-blue   { color: #60a5fa; }
+    .word.hl-word-pink   { color: #f472b6; }
+    .word.hl-bg-white    { background: rgba(255,255,255,0.9); color: #1a1a2e; }
+    .word.hl-bg-black    { background: rgba(0,0,0,0.75); }
 
     .verse-note-badge {
       display: inline-flex; align-items: center; gap: 0.15rem;
@@ -2077,10 +2077,15 @@ async function runCloudSync() {
   }
 }
 
+// White and black can't work as a font color on this dark theme (white would
+// be nearly indistinguishable from normal text, black would be invisible),
+// so those two keep a background "highlighter" treatment instead.
+const HIGHLIGHT_BG_COLORS = new Set(['white', 'black']);
+
 function renderVerseWords(text, key, globalStart) {
   const wordColors = highlightedWords.get(key);
   // Tokenize into words + the whitespace between them, so we can preserve
-  // original spacing exactly and also selectively color the gaps.
+  // original spacing exactly and (for background-based colors) fill gaps.
   const tokens = text.split(/(\s+)/).filter(t => t !== '');
   const parsed = tokens.map(token => {
     if (/^\s+$/.test(token)) return { text: token, isWord: false };
@@ -2092,6 +2097,7 @@ function renderVerseWords(text, key, globalStart) {
     t.localIdx = localIdx;
     t.globalIdx = globalStart + localIdx;
     t.color = wordColors ? wordColors.get(t.localIdx) : undefined;
+    t.bgColor = t.color && HIGHLIGHT_BG_COLORS.has(t.color);
     t.selecting = wordSelectionActive &&
       t.globalIdx >= wordSelectionStartGlobal && t.globalIdx <= wordSelectionEndGlobal;
     chapterWordIndex[t.globalIdx] = { verseKey: key, localIdx: t.localIdx };
@@ -2103,18 +2109,18 @@ function renderVerseWords(text, key, globalStart) {
     const t = parsed[i];
     if (t.isWord) {
       const cls = ['word'];
-      if (t.color) cls.push('hl-word-' + t.color);
+      if (t.color) cls.push((t.bgColor ? 'hl-bg-' : 'hl-word-') + t.color);
       if (t.selecting) cls.push('word-selecting');
       html += `<span class="${cls.join(' ')}" data-global-idx="${t.globalIdx}">${escHtml(t.text)}</span>`;
     } else {
-      // Whitespace between two words: if both neighbors share the same
-      // color/selecting state, fill the gap too so the highlight/selection
-      // reads as one continuous band instead of separate per-word blocks.
+      // Whitespace between two words: a font-color highlight already carries
+      // through plain text with nothing to break, so only background-based
+      // highlights and the active selection preview need the gap filled too.
       const prev = parsed[i - 1];
       const next = parsed[i + 1];
       let gapCls = '';
       if (prev && next && prev.isWord && next.isWord) {
-        if (prev.color && prev.color === next.color) gapCls = 'hl-word-' + prev.color;
+        if (prev.bgColor && prev.color === next.color) gapCls = 'hl-bg-' + prev.color;
         else if (prev.selecting && next.selecting) gapCls = 'word-selecting';
       }
       html += gapCls ? `<span class="word-gap ${gapCls}">${t.text}</span>` : t.text;
