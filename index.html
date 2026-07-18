@@ -461,14 +461,14 @@
     }
     #bible-chapter-nav-bar button:disabled { color: var(--text-muted); cursor: not-allowed; opacity: 0.5; }
     #bible-chapter-nav-bar .bible-nav-current { font-size: 0.85rem; color: var(--text-muted); }
-    #bible-content { padding: 1rem 0.85rem 1rem 0.4rem; flex: 1; overflow-y: auto; }
+    #bible-content { padding: 1.25rem; flex: 1; overflow-y: auto; }
     .verse-row {
       display: flex; gap: 0.5rem; padding: 0.35rem 0;
       border-radius: var(--radius); transition: background 0.12s; cursor: pointer;
     }
     .verse-row:hover { background: rgba(255,255,255,0.04); }
     .verse-num { font-size: 0.72rem; font-weight: 700; color: var(--accent);
-      min-width: 1.3rem; padding-top: 0.22rem; text-align: left; flex-shrink: 0; }
+      min-width: 1.6rem; padding-top: 0.22rem; text-align: left; flex-shrink: 0; }
     .verse-text { font-size: 0.95rem; color: var(--text-primary); line-height: 1.7; }
     .verse-row.flash-highlight {
       background: rgba(99,102,241,0.35);
@@ -519,15 +519,15 @@
     }
 
     /* ── Word-level tap & highlight ── */
-    .word { cursor: pointer; border-radius: 2px; }
-    .word:hover { background: rgba(255,255,255,0.08); }
-    .word.word-selecting { background: rgba(99,102,241,0.4); box-shadow: 0 0 0 1px var(--accent); }
+    .word { cursor: pointer; }
+    .word:hover { background: rgba(255,255,255,0.08); border-radius: 2px; }
+    .word.word-selecting { background: rgba(99,102,241,0.4); }
     .word.hl-word-yellow { background: rgba(234,179,8,0.55); }
     .word.hl-word-green  { background: rgba(34,197,94,0.5); }
     .word.hl-word-blue   { background: rgba(59,130,246,0.5); }
     .word.hl-word-pink   { background: rgba(236,72,153,0.5); }
     .word.hl-word-white  { background: rgba(255,255,255,0.9); color: #1a1a2e; }
-    .word.hl-word-black  { background: rgba(0,0,0,0.75); box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
+    .word.hl-word-black  { background: rgba(0,0,0,0.75); }
 
     .verse-note-badge {
       display: inline-flex; align-items: center; gap: 0.15rem;
