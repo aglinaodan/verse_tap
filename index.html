@@ -9,6 +9,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="esv_version.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* ── CSS CUSTOM PROPERTIES (Themes) ── */
     :root {
@@ -91,7 +94,7 @@
       height: 100%;
       background: var(--bg-base);
       color: var(--text-primary);
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Century Gothic', CenturyGothic, AppleGothic, 'Jost', system-ui, sans-serif;
       font-size: var(--base-font, 16px);
       overflow: hidden;
     }
@@ -417,19 +420,60 @@
 
     /* ── Bible Reader ── */
     #bible-view { padding: 0; }
+    #view-bible.active { display: flex; flex-direction: column; }
     #bible-top-bar {
-      position: sticky; top: 0; background: var(--bg-card);
+      background: var(--bg-card);
       border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1.25rem; z-index: 10;
-      display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+      padding: 0.75rem 1.1rem; flex-shrink: 0;
+      display: flex; align-items: center; gap: 0.6rem;
     }
-    .sn-select {
+    .bible-back-link {
+      display: flex; align-items: center; gap: 0.15rem;
+      background: none; border: none; color: var(--accent);
+      font-size: 0.95rem; font-weight: 600; cursor: pointer; padding: 0.2rem;
+      flex-shrink: 0;
+    }
+    .bible-title-picker {
+      display: flex; align-items: baseline; gap: 0.3rem; flex: 1;
+      font-size: 1.1rem; font-weight: 700; color: var(--text-primary);
+      overflow: hidden;
+    }
+    .bible-title-part {
+      position: relative; display: inline-block; cursor: pointer;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .bible-title-part select {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; border: none; cursor: pointer;
+    }
+    .bible-search-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 2rem; height: 2rem; flex-shrink: 0;
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+    }
+    .bible-search-btn:hover { color: var(--text-primary); }
+    .bible-version-picker {
+      position: relative; display: inline-flex; align-items: center; gap: 0.2rem;
       background: var(--bg-base); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text-primary);
-      padding: 0.4rem 0.65rem; font-size: 0.85rem; cursor: pointer;
-      outline: none;
+      border-radius: var(--radius); padding: 0.35rem 0.6rem; flex-shrink: 0;
+      font-size: 0.82rem; font-weight: 700; color: var(--text-primary); cursor: pointer;
     }
-    #bible-content { padding: 1.25rem; }
+    .bible-version-picker select {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      opacity: 0; border: none; cursor: pointer;
+    }
+    #bible-chapter-nav-bar {
+      flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.1rem; background: var(--bg-nav); border-top: 1px solid var(--border);
+    }
+    #bible-chapter-nav-bar button {
+      display: flex; align-items: center; gap: 0.25rem;
+      background: none; border: none; color: var(--accent);
+      font-size: 0.85rem; font-weight: 600; cursor: pointer; padding: 0.3rem;
+    }
+    #bible-chapter-nav-bar button:disabled { color: var(--text-muted); cursor: not-allowed; opacity: 0.5; }
+    #bible-chapter-nav-bar .bible-nav-current { font-size: 0.85rem; color: var(--text-muted); }
+    #bible-content { padding: 1.25rem; flex: 1; overflow-y: auto; }
     .verse-row {
       display: flex; gap: 0.5rem; padding: 0.35rem 0;
       border-radius: var(--radius); transition: background 0.12s; cursor: pointer;
@@ -438,15 +482,18 @@
     .verse-num { font-size: 0.72rem; font-weight: 700; color: var(--accent);
       min-width: 1.8rem; padding-top: 0.22rem; text-align: right; flex-shrink: 0; }
     .verse-text { font-size: 0.95rem; color: var(--text-primary); line-height: 1.7; }
-    .verse-row.highlighted { background: rgba(99,102,241,0.18); }
     .verse-row.selected {
       background: rgba(99,102,241,0.14);
       border-left: 3px solid var(--accent);
       padding-left: 0.5rem; margin-left: -0.5rem;
     }
+    .verse-row.flash-highlight {
+      background: rgba(99,102,241,0.35);
+      transition: background 0.3s ease;
+    }
 
     #verse-selection-bar {
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+      flex-shrink: 0; z-index: 45;
       display: none; align-items: center; justify-content: space-between;
       gap: 0.75rem; padding: 0.8rem 1.1rem;
       background: var(--bg-nav); border-top: 1px solid var(--border);
@@ -489,20 +536,39 @@
     }
 
     /* ── Verse action popover ── */
-    #verse-popover {
-      position: fixed; z-index: 300;
-      background: var(--bg-nav); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 0.5rem;
-      display: none; flex-direction: column; gap: 0.25rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 160px;
+    /* ── Verse highlight colors ── */
+    .verse-row.hl-yellow { background: rgba(234,179,8,0.32); }
+    .verse-row.hl-green  { background: rgba(34,197,94,0.28); }
+    .verse-row.hl-blue   { background: rgba(59,130,246,0.30); }
+    .verse-row.hl-pink   { background: rgba(236,72,153,0.28); }
+    .verse-row.hl-white  { background: rgba(255,255,255,0.85); }
+    .verse-row.hl-white .verse-text, .verse-row.hl-white .verse-num { color: #1a1a2e; }
+    .verse-row.hl-black  { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.12); }
+
+    #highlight-color-picker {
+      flex-shrink: 0; display: none; align-items: center; justify-content: center;
+      gap: 0.6rem; padding: 0.7rem 1.1rem;
+      background: var(--bg-nav); border-top: 1px solid var(--border);
     }
-    #verse-popover.visible { display: flex; }
-    .popover-btn {
-      display: flex; align-items: center; gap: 0.5rem;
-      padding: 0.45rem 0.7rem; border-radius: var(--radius); font-size: 0.83rem;
-      cursor: pointer; color: var(--text-muted); transition: all 0.12s;
+    #highlight-color-picker.show { display: flex; }
+    .hl-swatch {
+      width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid var(--border);
+      cursor: pointer; padding: 0; transition: transform 0.12s;
     }
-    .popover-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+    .hl-swatch:hover { transform: scale(1.12); }
+    .hl-swatch:active { transform: scale(0.92); }
+    .hl-swatch-clear {
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg-base); color: var(--text-muted); font-size: 0.9rem;
+    }
+    .vsel-icon-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 2rem; height: 2rem; padding: 0;
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      border-radius: var(--radius); transition: all 0.12s;
+    }
+    .vsel-icon-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+    .vsel-icon-btn.active { color: var(--accent); }
 
     /* ── Chip input (tags) ── */
     .chip-wrap {
@@ -964,22 +1030,71 @@
     <!-- ─── BIBLE VIEW ─── -->
     <div id="view-bible" class="view" style="padding:0;">
       <div id="bible-top-bar">
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;flex:1;">
-          <select id="bible-book-select" class="sn-select" onchange="onBibleBookChange()"></select>
-          <select id="bible-chapter-select" class="sn-select" onchange="onBibleChapterChange()"></select>
-          <select id="bible-translation-select" class="sn-select" onchange="onTranslationChange()"></select>
-        </div>
-        <button class="btn btn-ghost" style="font-size:0.78rem;padding:0.35rem 0.7rem;" onclick="showView('main')">
-          ← Back
+        <button class="bible-back-link" onclick="showView('main')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+          Back
         </button>
+        <div class="bible-title-picker">
+          <span class="bible-title-part" id="bible-book-label-wrap">
+            <span id="bible-book-label">Genesis</span>
+            <select id="bible-book-select" onchange="onBibleBookChange()"></select>
+          </span>
+          <span class="bible-title-part" id="bible-chapter-label-wrap">
+            <span id="bible-chapter-label">1</span>
+            <select id="bible-chapter-select" onchange="onBibleChapterChange()"></select>
+          </span>
+        </div>
+        <button class="bible-search-btn" onclick="openBibleSearchModal()" title="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+        <div class="bible-version-picker">
+          <span id="bible-version-label">KJV</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>
+          <select id="bible-translation-select" onchange="onTranslationChange()"></select>
+        </div>
       </div>
       <div id="bible-content"></div>
+      <div id="highlight-color-picker">
+        <button class="hl-swatch" style="background:#facc15" onclick="applyHighlightColor('yellow')" title="Yellow"></button>
+        <button class="hl-swatch" style="background:#22c55e" onclick="applyHighlightColor('green')" title="Green"></button>
+        <button class="hl-swatch" style="background:#3b82f6" onclick="applyHighlightColor('blue')" title="Blue"></button>
+        <button class="hl-swatch" style="background:#ec4899" onclick="applyHighlightColor('pink')" title="Pink"></button>
+        <button class="hl-swatch" style="background:#ffffff" onclick="applyHighlightColor('white')" title="White"></button>
+        <button class="hl-swatch" style="background:#000000" onclick="applyHighlightColor('black')" title="Black"></button>
+        <button class="hl-swatch hl-swatch-clear" onclick="applyHighlightColor(null)" title="Remove highlight">✕</button>
+      </div>
       <div id="verse-selection-bar">
         <span class="vsel-ref" id="vsel-ref-label"></span>
         <div class="vsel-actions">
-          <button class="btn btn-ghost" style="font-size:0.82rem;padding:0.4rem 0.8rem;" onclick="clearVerseSelection()">Clear</button>
+          <button class="vsel-icon-btn" onclick="copySelectedVerses()" title="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <button class="vsel-icon-btn" id="vsel-highlight-btn" onclick="toggleHighlightPicker()" title="Highlight">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+          <button class="vsel-icon-btn" onclick="clearVerseSelection()" title="Clear">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
           <button class="btn btn-primary" style="font-size:0.82rem;padding:0.4rem 0.9rem;" onclick="createNoteFromVerseSelection()">Create Note</button>
         </div>
+      </div>
+      <div id="bible-chapter-nav-bar">
+        <button id="bible-prev-btn" onclick="goToPrevChapter()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+          Previous
+        </button>
+        <span class="bible-nav-current" id="bible-nav-current"></span>
+        <button id="bible-next-btn" onclick="goToNextChapter()">
+          Next
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,18 15,12 9,6"/></svg>
+        </button>
       </div>
     </div>
 
@@ -1172,6 +1287,28 @@
   </div>
 </div>
 
+<div id="bible-search-modal" class="modal-backdrop" onclick="closeBibleSearchModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span style="font-weight:700;font-size:0.95rem;color:var(--text-primary);">Jump to a passage</span>
+      <button class="icon-btn" onclick="closeBibleSearchModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="text" id="bible-search-input" class="sn-input"
+        placeholder="e.g. Genesis 2 or John 3:16"
+        onkeydown="if(event.key==='Enter') submitBibleSearch()" />
+    </div>
+    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn btn-ghost" onclick="closeBibleSearchModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitBibleSearch()">Go</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════════════════════
      NOTE ACTION SHEET (long-press on a note card)
 ════════════════════════════════════════════════════════════════ -->
@@ -1239,33 +1376,7 @@
 <!-- ═══════════════════════════════════════════════════════════════
      VERSE POPOVER
 ════════════════════════════════════════════════════════════════ -->
-<div id="verse-popover">
-  <div class="popover-btn" onclick="copySelectedVerse()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-    </svg>
-    Copy verse
-  </div>
-  <div class="popover-btn" onclick="highlightSelectedVerse()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round">
-      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-    </svg>
-    Highlight
-  </div>
-  <div class="popover-btn" onclick="addVerseToNote()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round">
-      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-    Add to note
-  </div>
-  <div class="popover-btn" onclick="closeVersePopover()" style="border-top:1px solid var(--border);margin-top:0.15rem;padding-top:0.45rem;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-    </svg>
-    Dismiss
-  </div>
-</div>
+
 
 <!-- ═══════════════════════════════════════════════════════════════
      TOAST CONTAINER
@@ -1299,8 +1410,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1315,8 +1426,7 @@ let editingNoteId = null;
 let currentTags = [];
 let currentView = 'main';
 let activeTagFilter = null;
-let selectedVerseRef = null;
-let highlightedVerses = new Set();
+let highlightedVerses = new Map(); // key "bookId:chapter:verse" -> color name
 let currentDetailNoteId = null;
 let viewReturnTarget = 'main';   // 'main' | 'editor' — where "Back"/close returns to
 let viewingDraft = null;         // holds unsaved {title, content, tags} when previewing from editor
@@ -1667,6 +1777,94 @@ function onBibleChapterChange() {
   renderBibleChapter();
 }
 
+function getAllBooksOrdered() {
+  if (!window.BibleEngine) return [];
+  return [...BibleEngine.getTestament('OT'), ...BibleEngine.getTestament('NT')];
+}
+
+function updateChapterNavBar(bookId, chapter, book) {
+  document.getElementById('bible-nav-current').textContent = `${book.name} ${chapter}`;
+  const books = getAllBooksOrdered();
+  const idx = books.findIndex(b => b.id === bookId);
+  document.getElementById('bible-prev-btn').disabled = (chapter === 1 && idx === 0);
+  const totalChapters = BibleEngine.getChapterCount(bookId);
+  document.getElementById('bible-next-btn').disabled = (chapter === totalChapters && idx === books.length - 1);
+}
+
+function navigateToChapter(bookId, chapter) {
+  if (verseSelectionMode) clearVerseSelection();
+  const bookSelect = document.getElementById('bible-book-select');
+  if (bookSelect.value !== bookId) {
+    bookSelect.value = bookId;
+    populateBibleChapters(bookId);
+  }
+  document.getElementById('bible-chapter-select').value = chapter;
+  renderBibleChapter();
+  document.getElementById('bible-content').scrollTop = 0;
+}
+
+function goToPrevChapter() {
+  const bookId = document.getElementById('bible-book-select').value;
+  const chapter = parseInt(document.getElementById('bible-chapter-select').value, 10);
+  if (chapter > 1) { navigateToChapter(bookId, chapter - 1); return; }
+  const books = getAllBooksOrdered();
+  const idx = books.findIndex(b => b.id === bookId);
+  if (idx > 0) {
+    const prevBook = books[idx - 1];
+    navigateToChapter(prevBook.id, BibleEngine.getChapterCount(prevBook.id));
+  }
+}
+
+function goToNextChapter() {
+  const bookId = document.getElementById('bible-book-select').value;
+  const chapter = parseInt(document.getElementById('bible-chapter-select').value, 10);
+  const totalChapters = BibleEngine.getChapterCount(bookId);
+  if (chapter < totalChapters) { navigateToChapter(bookId, chapter + 1); return; }
+  const books = getAllBooksOrdered();
+  const idx = books.findIndex(b => b.id === bookId);
+  if (idx !== -1 && idx < books.length - 1) {
+    navigateToChapter(books[idx + 1].id, 1);
+  }
+}
+
+function openBibleSearchModal() {
+  const input = document.getElementById('bible-search-input');
+  input.value = '';
+  document.getElementById('bible-search-modal').classList.add('show');
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeBibleSearchModal() {
+  document.getElementById('bible-search-modal').classList.remove('show');
+}
+
+function submitBibleSearch() {
+  const raw = document.getElementById('bible-search-input').value.trim();
+  if (!raw) return;
+  const m = raw.match(/^(.+?)\s+(\d{1,3})(?::(\d{1,3}))?$/);
+  if (!m) { toast("Try a format like 'Genesis 2' or 'John 3:16'."); return; }
+  const [, nameRaw, chapterStr, verseStr] = m;
+  const bookId = verseNameToId[nameRaw.trim().toLowerCase()];
+  if (!bookId) { toast(`Couldn't find a book named "${nameRaw.trim()}".`); return; }
+  const chapter = parseInt(chapterStr, 10);
+  const totalChapters = BibleEngine.getChapterCount(bookId);
+  if (chapter < 1 || chapter > totalChapters) { toast(`That book only has ${totalChapters} chapters.`); return; }
+
+  closeBibleSearchModal();
+  navigateToChapter(bookId, chapter);
+
+  if (verseStr) {
+    const verseEl = document.getElementById(`verse-${bookId}-${chapter}-${verseStr}`);
+    if (verseEl) {
+      setTimeout(() => {
+        verseEl.scrollIntoView({ block: 'center' });
+        verseEl.classList.add('flash-highlight');
+        setTimeout(() => verseEl.classList.remove('flash-highlight'), 1800);
+      }, 60);
+    }
+  }
+}
+
 function populateBibleTranslations() {
   if (!window.BibleEngine) return;
   const sel = document.getElementById('bible-translation-select');
@@ -1872,18 +2070,18 @@ function renderBibleChapter() {
   const book = BibleEngine.findBook(bookId);
   const tid = BibleEngine.getActiveTranslation();
 
+  document.getElementById('bible-book-label').textContent = book.name;
+  document.getElementById('bible-chapter-label').textContent = chapter;
+  document.getElementById('bible-version-label').textContent = tid;
+  updateChapterNavBar(bookId, chapter, book);
+
   document.getElementById('bible-content').innerHTML = `
-    <div style="margin-bottom:1.25rem;">
-      <h2 style="font-size:1.3rem;font-weight:700;color:var(--text-primary);margin-bottom:0.15rem;">
-        ${book.name} ${chapter}
-      </h2>
-      <div style="font-size:0.75rem;color:var(--accent);font-weight:600;">${tid}</div>
-    </div>
     ${verses.map(v => {
       const key = `${bookId}:${chapter}:${v.verse}`;
       const isSelected = verseSelectionMode && selectedVerses.has(key);
+      const hlColor = highlightedVerses.get(key);
       return `
-      <div class="verse-row ${highlightedVerses.has(key) ? 'highlighted' : ''}${isSelected ? ' selected' : ''}"
+      <div class="verse-row ${hlColor ? 'hl-' + hlColor : ''}${isSelected ? ' selected' : ''}"
            id="verse-${bookId}-${chapter}-${v.verse}"
            data-book-id="${bookId}" data-chapter="${chapter}" data-verse="${v.verse}">
         <span class="verse-num">${v.verse}</span>
@@ -1893,65 +2091,8 @@ function renderBibleChapter() {
   `;
 }
 
-function onVerseClick(event, bookId, chapter, verse) {
-  event.stopPropagation();
-  selectedVerseRef = { bookId, chapter, verse };
-  const popover = document.getElementById('verse-popover');
-  const x = Math.min(event.clientX, window.innerWidth - 180);
-  const y = Math.min(event.clientY + 8, window.innerHeight - 160);
-  popover.style.left = x + 'px';
-  popover.style.top = y + 'px';
-  popover.classList.add('visible');
-}
-
-function closeVersePopover() {
-  document.getElementById('verse-popover').classList.remove('visible');
-  selectedVerseRef = null;
-}
-
-function copySelectedVerse() {
-  if (!selectedVerseRef) return;
-  const { bookId, chapter, verse } = selectedVerseRef;
-  const v = BibleEngine.getVerse(bookId, chapter, verse);
-  navigator.clipboard.writeText(`${v.text} — ${v.reference} (${v.translation})`).then(() => {
-    toast('Verse copied!');
-  }).catch(() => {
-    toast('Copy failed — please select manually.');
-  });
-  closeVersePopover();
-}
-
-function highlightSelectedVerse() {
-  if (!selectedVerseRef) return;
-  const { bookId, chapter, verse } = selectedVerseRef;
-  const key = `${bookId}:${chapter}:${verse}`;
-  if (highlightedVerses.has(key)) {
-    highlightedVerses.delete(key);
-  } else {
-    highlightedVerses.add(key);
-  }
-  const el = document.getElementById(`verse-${bookId}-${chapter}-${verse}`);
-  if (el) el.classList.toggle('highlighted', highlightedVerses.has(key));
-  closeVersePopover();
-}
-
-function addVerseToNote() {
-  if (!selectedVerseRef) return;
-  const { bookId, chapter, verse } = selectedVerseRef;
-  const v = BibleEngine.getVerse(bookId, chapter, verse);
-  closeVersePopover();
-  openNoteEditor();
-  setTimeout(() => {
-    const ta = document.getElementById('note-content-input');
-    const ref = `\n[${v.reference} — ${v.translation}]\n${v.text}\n`;
-    ta.value += ref;
-  }, 100);
-}
-
 /* ═══════════════════════════════════════════════════════════════
-   BIBLE: multi-verse selection (long-press to start, tap to add/remove)
-   Single tap still opens the existing copy/highlight/add-to-note popover
-   above — this is a separate, additive interaction, not a replacement.
+   BIBLE: multi-verse selection (single tap starts/toggles selection)
 ════════════════════════════════════════════════════════════════ */
 let verseSelectionMode = false;
 let selectedVerses = new Set(); // keys "bookId:chapter:verse"
@@ -1963,10 +2104,6 @@ function setupBibleVerseInteractions() {
   if (!container || container.dataset.interactionsBound) return;
   container.dataset.interactionsBound = '1';
 
-  let pressTimer = null;
-  let longPressFired = false;
-  let startX = 0, startY = 0;
-
   const getVerseInfo = (target) => {
     const row = target.closest ? target.closest('.verse-row') : null;
     if (!row) return null;
@@ -1977,46 +2114,13 @@ function setupBibleVerseInteractions() {
     };
   };
 
-  const startPress = (target, x, y) => {
-    const info = getVerseInfo(target);
-    if (!info || verseSelectionMode) return;
-    longPressFired = false;
-    startX = x; startY = y;
-    pressTimer = setTimeout(() => {
-      longPressFired = true;
-      if (navigator.vibrate) navigator.vibrate(12);
-      startVerseSelection(info);
-    }, 500);
-  };
-  const cancelPress = () => clearTimeout(pressTimer);
-  const movePress = (x, y) => {
-    if (Math.abs(x - startX) > 10 || Math.abs(y - startY) > 10) cancelPress();
-  };
-
-  container.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    startPress(e.target, t.clientX, t.clientY);
-  }, { passive: true });
-  container.addEventListener('touchmove', e => {
-    const t = e.touches[0];
-    movePress(t.clientX, t.clientY);
-  }, { passive: true });
-  container.addEventListener('touchend', cancelPress);
-  container.addEventListener('touchcancel', cancelPress);
-
-  container.addEventListener('mousedown', e => startPress(e.target, e.clientX, e.clientY));
-  container.addEventListener('mousemove', e => { if (pressTimer) movePress(e.clientX, e.clientY); });
-  container.addEventListener('mouseup', cancelPress);
-  container.addEventListener('mouseleave', cancelPress);
-
   container.addEventListener('click', e => {
-    if (longPressFired) { longPressFired = false; return; }
     const info = getVerseInfo(e.target);
     if (!info) return;
     if (verseSelectionMode) {
       toggleVerseSelection(info);
     } else {
-      onVerseClick(e, info.bookId, info.chapter, info.verse);
+      startVerseSelection(info);
     }
   });
 }
@@ -2051,7 +2155,7 @@ function clearVerseSelection() {
   selectionBookId = null;
   selectionChapter = null;
   document.getElementById('verse-selection-bar').classList.remove('show');
-  document.getElementById('bible-content').style.paddingBottom = '';
+  document.getElementById('highlight-color-picker').classList.remove('show');
   renderBibleChapter();
 }
 
@@ -2077,7 +2181,6 @@ function updateVerseSelectionBar() {
   const verseNums = [...selectedVerses].map(k => parseInt(k.split(':')[2], 10));
   label.textContent = `${book ? book.name : selectionBookId} ${selectionChapter}:${formatVerseRanges(verseNums)}`;
   bar.classList.add('show');
-  document.getElementById('bible-content').style.paddingBottom = '4.5rem';
 }
 
 function createNoteFromVerseSelection() {
@@ -2101,6 +2204,49 @@ function createNoteFromVerseSelection() {
     const block = `\n[${refLabel}${translation ? ` — ${translation}` : ''}]\n${body.trim()}\n`;
     ta.value += block;
   }, 100);
+}
+
+function toggleHighlightPicker() {
+  const picker = document.getElementById('highlight-color-picker');
+  const btn = document.getElementById('vsel-highlight-btn');
+  const opening = !picker.classList.contains('show');
+  picker.classList.toggle('show', opening);
+  btn.classList.toggle('active', opening);
+}
+
+// Applies (or clears, if color is null) a highlight color to every currently
+// selected verse. Selection stays active afterward so Copy / Create Note can
+// still be used on the same set right after.
+function applyHighlightColor(color) {
+  if (selectedVerses.size === 0) return;
+  selectedVerses.forEach(key => {
+    if (color) highlightedVerses.set(key, color);
+    else highlightedVerses.delete(key);
+  });
+  document.getElementById('highlight-color-picker').classList.remove('show');
+  document.getElementById('vsel-highlight-btn').classList.remove('active');
+  renderBibleChapter();
+  toast(color ? 'Highlighted.' : 'Highlight removed.');
+}
+
+function copySelectedVerses() {
+  if (selectedVerses.size === 0) return;
+  const verseNums = [...selectedVerses].map(k => parseInt(k.split(':')[2], 10)).sort((a, b) => a - b);
+  const book = BibleEngine.findBook(selectionBookId);
+  let translation = '';
+  let body = '';
+  verseNums.forEach(v => {
+    const verse = BibleEngine.getVerse(selectionBookId, selectionChapter, v);
+    if (!verse) return;
+    translation = verse.translation || translation;
+    body += `${v} ${verse.text} `;
+  });
+  const refLabel = `${book ? book.name : selectionBookId} ${selectionChapter}:${formatVerseRanges(verseNums)}`;
+  navigator.clipboard.writeText(`${body.trim()} — ${refLabel} (${translation})`).then(() => {
+    toast('Copied!');
+  }).catch(() => {
+    toast('Copy failed — please select manually.');
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2921,30 +3067,23 @@ function getDaysLeft(deletedAt) {
 ════════════════════════════════════════════════════════════════ */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    closeVersePopover();
     closeVerseRefModal();
     closeNoteActionSheet();
     closeSyncPinModal();
+    closeBibleSearchModal();
     if (document.getElementById('note-view-page').classList.contains('open')) {
       closeNoteView();
     } else if (document.getElementById('note-editor-page').classList.contains('open')) {
       closeNoteEditor();
     }
     if (selectionMode) exitSelectionMode();
+    if (verseSelectionMode) clearVerseSelection();
     closeConfirm();
     closeSidenav();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 'n' && currentView === 'main') {
     e.preventDefault();
     openNoteEditor();
-  }
-});
-
-/* Close verse popover on outside click */
-document.addEventListener('click', e => {
-  const pop = document.getElementById('verse-popover');
-  if (pop.classList.contains('visible') && !pop.contains(e.target)) {
-    closeVersePopover();
   }
 });
 
