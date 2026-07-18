@@ -461,7 +461,7 @@
     }
     #bible-chapter-nav-bar button:disabled { color: var(--text-muted); cursor: not-allowed; opacity: 0.5; }
     #bible-chapter-nav-bar .bible-nav-current { font-size: 0.85rem; color: var(--text-muted); }
-    #bible-content { padding: 1.25rem; flex: 1; overflow-y: auto; }
+    #bible-content { padding: 1rem 0.6rem; flex: 1; overflow-y: auto; }
     .verse-row {
       display: flex; gap: 0.5rem; padding: 0.35rem 0;
       border-radius: var(--radius); transition: background 0.12s; cursor: pointer;
@@ -532,6 +532,11 @@
     .verse-row.hl-white  { background: rgba(255,255,255,0.85); }
     .verse-row.hl-white .verse-text, .verse-row.hl-white .verse-num { color: #1a1a2e; }
     .verse-row.hl-black  { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.12); }
+    .verse-note-badge {
+      display: inline-flex; align-items: center; gap: 0.15rem;
+      color: var(--accent); vertical-align: middle; margin-left: 0.3rem;
+    }
+    .verse-note-badge-count { font-size: 0.65rem; font-weight: 700; }
 
     #highlight-color-picker {
       flex-shrink: 0; display: none; align-items: center; justify-content: center;
@@ -1412,6 +1417,7 @@ let currentTags = [];
 let currentView = 'main';
 let activeTagFilter = null;
 let highlightedVerses = new Map(); // key "bookId:chapter:verse" -> color name
+let versesInNotes = new Map(); // key "bookId:chapter:verse" -> count of notes it's been added to
 let currentDetailNoteId = null;
 let viewReturnTarget = 'main';   // 'main' | 'editor' — where "Back"/close returns to
 let viewingDraft = null;         // holds unsaved {title, content, tags} when previewing from editor
@@ -2075,12 +2081,18 @@ function renderBibleChapter() {
       const key = `${bookId}:${chapter}:${v.verse}`;
       const isSelected = verseSelectionMode && selectedVerses.has(key);
       const hlColor = highlightedVerses.get(key);
+      const noteCount = versesInNotes.get(key) || 0;
       return `
       <div class="verse-row ${hlColor ? 'hl-' + hlColor : ''}${isSelected ? ' selected' : ''}"
            id="verse-${bookId}-${chapter}-${v.verse}"
            data-book-id="${bookId}" data-chapter="${chapter}" data-verse="${v.verse}">
         <span class="verse-num">${v.verse}</span>
-        <span class="verse-text">${escHtml(v.text)}</span>
+        <span class="verse-text">${escHtml(v.text)}${noteCount > 0 ? `
+          <span class="verse-note-badge" title="Added to ${noteCount} note${noteCount !== 1 ? 's' : ''}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+            ${noteCount > 1 ? `<span class="verse-note-badge-count">${noteCount}</span>` : ''}
+          </span>
+        ` : ''}</span>
       </div>
     `;}).join('')}
   `;
@@ -2191,6 +2203,11 @@ function createNoteFromVerseSelection() {
     body += `${v} ${verse.text} `;
   });
   const refLabel = `${book ? book.name : selectionBookId} ${selectionChapter}:${formatVerseRanges(verseNums)}`;
+
+  // Mark each verse as "added to a note" for the small badge in the reader.
+  selectedVerses.forEach(key => {
+    versesInNotes.set(key, (versesInNotes.get(key) || 0) + 1);
+  });
 
   clearVerseSelection();
   openNoteEditor();
