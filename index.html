@@ -421,18 +421,6 @@
     /* ── Bible Reader ── */
     #bible-view { padding: 0; }
     #view-bible.active { display: flex; flex-direction: column; }
-    #bible-top-bar {
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1.1rem; flex-shrink: 0;
-      display: flex; align-items: center; gap: 0.6rem;
-    }
-    .bible-back-link {
-      display: flex; align-items: center; gap: 0.15rem;
-      background: none; border: none; color: var(--accent);
-      font-size: 0.95rem; font-weight: 600; cursor: pointer; padding: 0.2rem;
-      flex-shrink: 0;
-    }
     .bible-title-picker {
       display: flex; align-items: baseline; gap: 0.3rem; flex: 1;
       font-size: 1.1rem; font-weight: 700; color: var(--text-primary);
@@ -962,18 +950,39 @@
 
   <!-- Top Nav -->
   <header id="top-nav">
-    <div style="display:flex;align-items:center;gap:0.75rem;">
+    <div style="display:flex;align-items:center;gap:0.75rem;overflow:hidden;flex:1;min-width:0;">
       <button class="icon-btn" id="hamburger-btn" onclick="openSidenav()" aria-label="Open menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
       </button>
+      <button class="icon-btn" id="back-btn" onclick="showView('main')" aria-label="Back" style="display:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+      </button>
       <span id="nav-title" style="font-weight:700;font-size:1rem;color:var(--text-primary)">SermonNotes</span>
+      <div class="bible-title-picker" id="bible-title-picker" style="display:none;">
+        <span class="bible-title-part" id="bible-book-label-wrap">
+          <span id="bible-book-label">Genesis</span>
+          <select id="bible-book-select" onchange="onBibleBookChange()"></select>
+        </span>
+        <span class="bible-title-part" id="bible-chapter-label-wrap">
+          <span id="bible-chapter-label">1</span>
+          <select id="bible-chapter-select" onchange="onBibleChapterChange()"></select>
+        </span>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:0.35rem;">
+    <div style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
       <span id="nav-translation" style="font-size:0.75rem;font-weight:700;color:var(--accent);
         background:rgba(99,102,241,0.15);padding:0.2rem 0.55rem;border-radius:var(--radius);"
         title="Bible Reader">ESV</span>
+      <button class="bible-search-btn" id="bible-search-btn" onclick="openBibleSearchModal()" title="Search" style="display:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <div class="bible-version-picker" id="bible-version-picker" style="display:none;">
+        <span id="bible-version-label">KJV</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>
+        <select id="bible-translation-select" onchange="onTranslationChange()"></select>
+      </div>
     </div>
   </header>
 
@@ -1029,30 +1038,6 @@
 
     <!-- ─── BIBLE VIEW ─── -->
     <div id="view-bible" class="view" style="padding:0;">
-      <div id="bible-top-bar">
-        <button class="bible-back-link" onclick="showView('main')">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
-          Back
-        </button>
-        <div class="bible-title-picker">
-          <span class="bible-title-part" id="bible-book-label-wrap">
-            <span id="bible-book-label">Genesis</span>
-            <select id="bible-book-select" onchange="onBibleBookChange()"></select>
-          </span>
-          <span class="bible-title-part" id="bible-chapter-label-wrap">
-            <span id="bible-chapter-label">1</span>
-            <select id="bible-chapter-select" onchange="onBibleChapterChange()"></select>
-          </span>
-        </div>
-        <button class="bible-search-btn" onclick="openBibleSearchModal()" title="Search">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </button>
-        <div class="bible-version-picker">
-          <span id="bible-version-label">KJV</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>
-          <select id="bible-translation-select" onchange="onTranslationChange()"></select>
-        </div>
-      </div>
       <div id="bible-content"></div>
       <div id="highlight-color-picker">
         <button class="hl-swatch" style="background:#facc15" onclick="applyHighlightColor('yellow')" title="Yellow"></button>
@@ -1680,6 +1665,16 @@ function showView(name) {
   // Update nav links
   document.getElementById('nav-notes-link').classList.toggle('active', name === 'main');
   document.getElementById('nav-recycle-link').classList.toggle('active', name === 'recycle');
+
+  // Toggle the shared top nav between normal mode and Bible mode
+  const isBible = name === 'bible';
+  document.getElementById('hamburger-btn').style.display = isBible ? 'none' : 'flex';
+  document.getElementById('back-btn').style.display = isBible ? 'flex' : 'none';
+  document.getElementById('nav-title').style.display = isBible ? 'none' : 'inline';
+  document.getElementById('bible-title-picker').style.display = isBible ? 'flex' : 'none';
+  document.getElementById('bible-search-btn').style.display = isBible ? 'flex' : 'none';
+  document.getElementById('bible-version-picker').style.display = isBible ? 'inline-flex' : 'none';
+  document.getElementById('nav-translation').style.display = isBible ? 'none' : 'inline';
 
   if (name === 'bible') {
     renderBibleChapter();
