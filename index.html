@@ -532,6 +532,31 @@
     .verse-row.hl-white  { background: rgba(255,255,255,0.85); }
     .verse-row.hl-white .verse-text, .verse-row.hl-white .verse-num { color: #1a1a2e; }
     .verse-row.hl-black  { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.12); }
+
+    /* ── Word-level tap & highlight ── */
+    .word { cursor: pointer; border-radius: 2px; }
+    .word:hover { background: rgba(255,255,255,0.08); }
+    .word.word-selecting { background: rgba(99,102,241,0.4); box-shadow: 0 0 0 1px var(--accent); }
+    .word.hl-word-yellow { background: rgba(234,179,8,0.55); }
+    .word.hl-word-green  { background: rgba(34,197,94,0.5); }
+    .word.hl-word-blue   { background: rgba(59,130,246,0.5); }
+    .word.hl-word-pink   { background: rgba(236,72,153,0.5); }
+    .word.hl-word-white  { background: rgba(255,255,255,0.9); color: #1a1a2e; }
+    .word.hl-word-black  { background: rgba(0,0,0,0.75); box-shadow: 0 0 0 1px rgba(255,255,255,0.15); }
+
+    #word-selection-bar {
+      flex-shrink: 0; z-index: 45;
+      display: none; align-items: center; justify-content: space-between;
+      gap: 0.75rem; padding: 0.8rem 1.1rem;
+      background: var(--bg-nav); border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    }
+    #word-selection-bar.show { display: flex; }
+    #word-selection-bar .wsel-ref {
+      font-weight: 700; color: var(--text-primary); font-size: 0.85rem;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #word-selection-bar .wsel-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
     .verse-note-badge {
       display: inline-flex; align-items: center; gap: 0.15rem;
       color: var(--accent); vertical-align: middle; margin-left: 0.3rem;
@@ -1075,6 +1100,27 @@
           <button class="btn btn-primary" style="font-size:0.82rem;padding:0.4rem 0.9rem;" onclick="createNoteFromVerseSelection()">Create Note</button>
         </div>
       </div>
+      <div id="word-selection-bar">
+        <span class="wsel-ref" id="wsel-ref-label"></span>
+        <div class="wsel-actions">
+          <button class="vsel-icon-btn" onclick="copySelectedWords()" title="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <button class="vsel-icon-btn" id="wsel-highlight-btn" onclick="toggleHighlightPicker()" title="Highlight">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+          <button class="vsel-icon-btn" onclick="clearWordSelection()" title="Clear">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
       <div id="bible-chapter-nav-bar">
         <button id="bible-prev-btn" onclick="goToPrevChapter()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
@@ -1152,6 +1198,10 @@
       </svg>
       All Notes
     </button>
+    <span id="note-unsaved-badge" style="display:none;font-size:0.72rem;font-weight:700;color:var(--warn);
+      background:rgba(234,179,8,0.15);padding:0.2rem 0.55rem;border-radius:var(--radius);white-space:nowrap;">
+      ● Not saved yet
+    </span>
     <button class="note-page-pill-btn" onclick="viewFromEditor()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -1160,13 +1210,13 @@
     </button>
   </div>
   <div class="note-page-body">
-    <input class="note-page-title-input" id="note-title-input" type="text" placeholder="Sermon Title" maxlength="120" />
+    <input class="note-page-title-input" id="note-title-input" type="text" placeholder="Sermon Title" maxlength="120" oninput="markNoteEditorDirty()" />
     <div class="chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-input').focus()">
       <span class="tag-plus-icon">+</span>
       <input id="tag-input" placeholder="Add tag…" onkeydown="handleTagKeydown(event)" />
     </div>
     <div class="note-page-divider" style="margin:1.1rem 0;"></div>
-    <textarea class="note-page-content-textarea" id="note-content-input" placeholder="Your sermon notes, reflections, Scripture references…"></textarea>
+    <textarea class="note-page-content-textarea" id="note-content-input" placeholder="Your sermon notes, reflections, Scripture references…" oninput="markNoteEditorDirty()"></textarea>
   </div>
   <div class="note-page-footer">
     <button class="btn btn-ghost" onclick="closeNoteEditor()">Cancel</button>
@@ -1418,6 +1468,17 @@ let currentView = 'main';
 let activeTagFilter = null;
 let highlightedVerses = new Map(); // key "bookId:chapter:verse" -> color name
 let versesInNotes = new Map(); // key "bookId:chapter:verse" -> count of notes it's been added to
+let pendingNoteVerseKeys = []; // verses inserted into the currently-open draft, not yet saved
+let highlightedWords = new Map(); // key "bookId:chapter:verse" -> Map<wordIdx, color>
+
+// Word-level selection: tap one word to start, tap another to extend the
+// range between them. The anchor stays fixed so further taps keep adjusting
+// the other end, until Highlight/Copy/Clear is used from the bar.
+let wordSelectionActive = false;
+let wordSelectionVerseKey = null;
+let wordSelectionAnchor = null;
+let wordSelectionStart = null;
+let wordSelectionEnd = null;
 let currentDetailNoteId = null;
 let viewReturnTarget = 'main';   // 'main' | 'editor' — where "Back"/close returns to
 let viewingDraft = null;         // holds unsaved {title, content, tags} when previewing from editor
@@ -1657,6 +1718,7 @@ function showView(name) {
   currentView = name;
   if (name !== 'main' && selectionMode) exitSelectionMode();
   if (name !== 'bible' && verseSelectionMode) clearVerseSelection();
+  if (name !== 'bible' && wordSelectionActive) clearWordSelection();
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(`view-${name}`);
   if (el) el.classList.add('active');
@@ -1768,6 +1830,7 @@ function populateBibleChapters(bookId) {
 
 function onBibleBookChange() {
   if (verseSelectionMode) clearVerseSelection();
+  if (wordSelectionActive) clearWordSelection();
   const bookId = document.getElementById('bible-book-select').value;
   populateBibleChapters(bookId);
   renderBibleChapter();
@@ -1775,6 +1838,7 @@ function onBibleBookChange() {
 
 function onBibleChapterChange() {
   if (verseSelectionMode) clearVerseSelection();
+  if (wordSelectionActive) clearWordSelection();
   renderBibleChapter();
 }
 
@@ -1794,6 +1858,7 @@ function updateChapterNavBar(bookId, chapter, book) {
 
 function navigateToChapter(bookId, chapter) {
   if (verseSelectionMode) clearVerseSelection();
+  if (wordSelectionActive) clearWordSelection();
   const bookSelect = document.getElementById('bible-book-select');
   if (bookSelect.value !== bookId) {
     bookSelect.value = bookId;
@@ -2063,6 +2128,24 @@ async function runCloudSync() {
   }
 }
 
+function renderVerseWords(text, key) {
+  const wordColors = highlightedWords.get(key);
+  const inSelection = wordSelectionActive && wordSelectionVerseKey === key;
+  let wordIdx = 0;
+  // Split into words and the whitespace between them, keeping both so the
+  // original spacing is preserved exactly when we reassemble the HTML.
+  return text.split(/(\s+)/).map(token => {
+    if (/^\s+$/.test(token) || token === '') return token;
+    const idx = wordIdx++;
+    const color = wordColors ? wordColors.get(idx) : undefined;
+    const selecting = inSelection && idx >= wordSelectionStart && idx <= wordSelectionEnd;
+    const cls = ['word'];
+    if (color) cls.push('hl-word-' + color);
+    if (selecting) cls.push('word-selecting');
+    return `<span class="${cls.join(' ')}" data-word-idx="${idx}">${escHtml(token)}</span>`;
+  }).join('');
+}
+
 function renderBibleChapter() {
   if (!window.BibleEngine) return;
   const bookId = document.getElementById('bible-book-select').value;
@@ -2087,7 +2170,7 @@ function renderBibleChapter() {
            id="verse-${bookId}-${chapter}-${v.verse}"
            data-book-id="${bookId}" data-chapter="${chapter}" data-verse="${v.verse}">
         <span class="verse-num">${v.verse}</span>
-        <span class="verse-text">${escHtml(v.text)}${noteCount > 0 ? `
+        <span class="verse-text">${renderVerseWords(v.text, key)}${noteCount > 0 ? `
           <span class="verse-note-badge" title="Added to ${noteCount} note${noteCount !== 1 ? 's' : ''}">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
             ${noteCount > 1 ? `<span class="verse-note-badge-count">${noteCount}</span>` : ''}
@@ -2122,8 +2205,14 @@ function setupBibleVerseInteractions() {
   };
 
   container.addEventListener('click', e => {
+    const wordEl = e.target.closest('.word');
+    if (wordEl) {
+      handleWordTap(wordEl);
+      return;
+    }
     const info = getVerseInfo(e.target);
     if (!info) return;
+    if (wordSelectionActive) clearWordSelection();
     if (verseSelectionMode) {
       toggleVerseSelection(info);
     } else {
@@ -2133,6 +2222,7 @@ function setupBibleVerseInteractions() {
 }
 
 function startVerseSelection(info) {
+  if (wordSelectionActive) clearWordSelection();
   verseSelectionMode = true;
   selectionBookId = info.bookId;
   selectionChapter = info.chapter;
@@ -2165,6 +2255,77 @@ function clearVerseSelection() {
   document.getElementById('highlight-color-picker').classList.remove('show');
   renderBibleChapter();
 }
+
+/* ── Word-level selection (tap a word to start, tap another to extend) ── */
+function handleWordTap(wordEl) {
+  const row = wordEl.closest('.verse-row');
+  const key = `${row.dataset.bookId}:${row.dataset.chapter}:${row.dataset.verse}`;
+  const idx = parseInt(wordEl.dataset.wordIdx, 10);
+
+  if (verseSelectionMode) clearVerseSelection();
+  if (wordSelectionActive && wordSelectionVerseKey !== key) clearWordSelection();
+
+  if (!wordSelectionActive) {
+    wordSelectionActive = true;
+    wordSelectionVerseKey = key;
+    wordSelectionAnchor = idx;
+    wordSelectionStart = idx;
+    wordSelectionEnd = idx;
+  } else if (idx === wordSelectionAnchor && wordSelectionStart === wordSelectionEnd) {
+    // Tapping the sole selected word again cancels the selection
+    clearWordSelection();
+    return;
+  } else {
+    wordSelectionStart = Math.min(wordSelectionAnchor, idx);
+    wordSelectionEnd = Math.max(wordSelectionAnchor, idx);
+  }
+  renderBibleChapter();
+  updateWordSelectionBar();
+}
+
+function clearWordSelection() {
+  wordSelectionActive = false;
+  wordSelectionVerseKey = null;
+  wordSelectionAnchor = null;
+  wordSelectionStart = null;
+  wordSelectionEnd = null;
+  document.getElementById('word-selection-bar').classList.remove('show');
+  document.getElementById('highlight-color-picker').classList.remove('show');
+  renderBibleChapter();
+}
+
+function getSelectedWordText(key) {
+  const [bookId, chapterStr, verseStr] = key.split(':');
+  const verse = BibleEngine.getVerse(bookId, parseInt(chapterStr, 10), parseInt(verseStr, 10));
+  if (!verse) return '';
+  const tokens = verse.text.split(/\s+/).filter(t => t !== '');
+  return tokens.slice(wordSelectionStart, wordSelectionEnd + 1).join(' ');
+}
+
+function updateWordSelectionBar() {
+  const bar = document.getElementById('word-selection-bar');
+  const label = document.getElementById('wsel-ref-label');
+  const [bookId, chapterStr, verseStr] = wordSelectionVerseKey.split(':');
+  const book = BibleEngine.findBook(bookId);
+  const snippet = getSelectedWordText(wordSelectionVerseKey);
+  const shortSnippet = snippet.length > 28 ? snippet.slice(0, 28) + '…' : snippet;
+  label.textContent = `${book ? book.name : bookId} ${chapterStr}:${verseStr} "${shortSnippet}"`;
+  bar.classList.add('show');
+}
+
+function copySelectedWords() {
+  if (!wordSelectionActive) return;
+  const snippet = getSelectedWordText(wordSelectionVerseKey);
+  const [bookId, chapterStr, verseStr] = wordSelectionVerseKey.split(':');
+  const book = BibleEngine.findBook(bookId);
+  navigator.clipboard.writeText(`${snippet} — ${book ? book.name : bookId} ${chapterStr}:${verseStr}`).then(() => {
+    toast('Copied!');
+  }).catch(() => {
+    toast('Copy failed — please select manually.');
+  });
+}
+
+
 
 // Turns a sorted list of verse numbers into standard Bible-style range
 // notation, e.g. [1,2,3,5,7,8] -> "1-3,5,7-8"
@@ -2204,10 +2365,10 @@ function createNoteFromVerseSelection() {
   });
   const refLabel = `${book ? book.name : selectionBookId} ${selectionChapter}:${formatVerseRanges(verseNums)}`;
 
-  // Mark each verse as "added to a note" for the small badge in the reader.
-  selectedVerses.forEach(key => {
-    versesInNotes.set(key, (versesInNotes.get(key) || 0) + 1);
-  });
+  // Track these verses so we can mark them "added to a note" once the note
+  // is actually saved — not right now, since the draft could still be
+  // discarded without saving.
+  pendingNoteVerseKeys = [...selectedVerses];
 
   clearVerseSelection();
   openNoteEditor();
@@ -2215,28 +2376,47 @@ function createNoteFromVerseSelection() {
     const ta = document.getElementById('note-content-input');
     const block = `\n[${refLabel}${translation ? ` — ${translation}` : ''}]\n${body.trim()}\n`;
     ta.value += block;
+    markNoteEditorDirty();
   }, 100);
 }
 
 function toggleHighlightPicker() {
   const picker = document.getElementById('highlight-color-picker');
-  const btn = document.getElementById('vsel-highlight-btn');
   const opening = !picker.classList.contains('show');
   picker.classList.toggle('show', opening);
-  btn.classList.toggle('active', opening);
+  const vBtn = document.getElementById('vsel-highlight-btn');
+  const wBtn = document.getElementById('wsel-highlight-btn');
+  if (vBtn) vBtn.classList.toggle('active', opening);
+  if (wBtn) wBtn.classList.toggle('active', opening);
 }
 
-// Applies (or clears, if color is null) a highlight color to every currently
-// selected verse. Selection stays active afterward so Copy / Create Note can
-// still be used on the same set right after.
+// Applies (or clears, if color is null) a highlight color to whichever is
+// currently active: the whole-verse selection, or a word/phrase selection.
+// Selection stays active afterward so Copy / Create Note can still be used
+// on the same set right after.
 function applyHighlightColor(color) {
-  if (selectedVerses.size === 0) return;
-  selectedVerses.forEach(key => {
-    if (color) highlightedVerses.set(key, color);
-    else highlightedVerses.delete(key);
-  });
+  if (wordSelectionActive) {
+    let wordColors = highlightedWords.get(wordSelectionVerseKey);
+    if (!wordColors) {
+      wordColors = new Map();
+      highlightedWords.set(wordSelectionVerseKey, wordColors);
+    }
+    for (let i = wordSelectionStart; i <= wordSelectionEnd; i++) {
+      if (color) wordColors.set(i, color);
+      else wordColors.delete(i);
+    }
+    if (wordColors.size === 0) highlightedWords.delete(wordSelectionVerseKey);
+  } else if (selectedVerses.size > 0) {
+    selectedVerses.forEach(key => {
+      if (color) highlightedVerses.set(key, color);
+      else highlightedVerses.delete(key);
+    });
+  } else {
+    return;
+  }
   document.getElementById('highlight-color-picker').classList.remove('show');
-  document.getElementById('vsel-highlight-btn').classList.remove('active');
+  document.getElementById('vsel-highlight-btn')?.classList.remove('active');
+  document.getElementById('wsel-highlight-btn')?.classList.remove('active');
   renderBibleChapter();
   toast(color ? 'Highlighted.' : 'Highlight removed.');
 }
@@ -2264,9 +2444,25 @@ function copySelectedVerses() {
 /* ═══════════════════════════════════════════════════════════════
    NOTES: CRUD
 ════════════════════════════════════════════════════════════════ */
+let noteEditorDirty = false;
+
+function markNoteEditorDirty() {
+  if (noteEditorDirty) return;
+  noteEditorDirty = true;
+  const badge = document.getElementById('note-unsaved-badge');
+  if (badge) badge.style.display = 'inline-block';
+}
+
+function clearNoteEditorDirty() {
+  noteEditorDirty = false;
+  const badge = document.getElementById('note-unsaved-badge');
+  if (badge) badge.style.display = 'none';
+}
+
 function openNoteEditor(noteId = null) {
   editingNoteId = noteId;
   currentTags = [];
+  clearNoteEditorDirty();
 
   if (noteId) {
     const note = notes.find(n => n.id === noteId);
@@ -2290,6 +2486,8 @@ function closeNoteEditor() {
   document.getElementById('note-editor-page').classList.remove('open');
   editingNoteId = null;
   currentTags = [];
+  pendingNoteVerseKeys = [];
+  clearNoteEditorDirty();
 }
 
 // Adds or replaces a note in the in-memory `notes` array by id. Used for the
@@ -2340,6 +2538,12 @@ async function saveNote() {
       };
       const saved = await dbAdd(newNote);
       upsertLocalNote(saved);
+      if (pendingNoteVerseKeys.length) {
+        pendingNoteVerseKeys.forEach(key => {
+          versesInNotes.set(key, (versesInNotes.get(key) || 0) + 1);
+        });
+        pendingNoteVerseKeys = [];
+      }
       toast('Note saved!');
     }
     closeNoteEditor();
@@ -2946,18 +3150,21 @@ function handleTagKeydown(e) {
     if (val && !currentTags.includes(val)) {
       currentTags.push(val);
       renderTagChips();
+      markNoteEditorDirty();
     }
     e.target.value = '';
   }
   if (e.key === 'Backspace' && !e.target.value && currentTags.length) {
     currentTags.pop();
     renderTagChips();
+    markNoteEditorDirty();
   }
 }
 
 function removeTag(tag) {
   currentTags = currentTags.filter(t => t !== tag);
   renderTagChips();
+  markNoteEditorDirty();
 }
 
 function renderTagChips() {
@@ -3090,6 +3297,7 @@ document.addEventListener('keydown', e => {
     }
     if (selectionMode) exitSelectionMode();
     if (verseSelectionMode) clearVerseSelection();
+    if (wordSelectionActive) clearWordSelection();
     closeConfirm();
     closeSidenav();
   }
