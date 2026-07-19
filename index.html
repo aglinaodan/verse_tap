@@ -1254,6 +1254,7 @@
     </div>
     <div class="modal-body">
       <div id="verse-ref-modal-text" style="font-size:0.95rem;line-height:1.75;color:var(--text-primary);"></div>
+      <div id="verse-ref-modal-attribution"></div>
     </div>
   </div>
 </div>
@@ -1410,8 +1411,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1423,7 +1424,7 @@ const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
    app only fetches on demand and never caches more than one chapter
    at a time (see esv_version.js).
 ════════════════════════════════════════════════════════════════ */
-const ESV_API_KEY = 'f970b01e30fffa25ba30f3021ac6f0fcccc7f44c';
+const ESV_API_KEY = 'PASTE_YOUR_ESV_API_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════════════════
    APP STATE
@@ -1983,45 +1984,52 @@ function linkifyVerseRefs(text) {
   });
 }
 
-function openVerseRefModal(ref) {
+let _verseModalToken = 0;
+
+async function openVerseRefModal(ref) {
   if (!window.BibleEngine) return;
   const [bookId, chapterStr, verseRange] = ref.split(':');
   const chapter = parseInt(chapterStr, 10);
   const book = BibleEngine.findBook(bookId);
-  let text = '';
-  let translation = '';
-  let refLabel;
+  const myToken = ++_verseModalToken;
 
+  document.getElementById('verse-ref-modal-title').textContent = book ? `${book.name} ${chapter}` : ref;
+  document.getElementById('verse-ref-modal-text').textContent = 'Loading…';
+  const attrElLoading = document.getElementById('verse-ref-modal-attribution');
+  if (attrElLoading) attrElLoading.innerHTML = '';
+  document.getElementById('verse-ref-modal').classList.add('show');
+
+  const { verses, source } = await getChapterAnySource(bookId, chapter);
+  if (myToken !== _verseModalToken) return; // modal was reopened for a different ref meanwhile
+
+  let vStart, vEnd;
   if (verseRange === undefined) {
     // Chapter-only reference (e.g. "Genesis 1") — show the whole chapter
-    const verses = BibleEngine.getChapter(bookId, chapter) || [];
-    verses.forEach(v => {
-      translation = v.translation || translation;
-      text += `${v.verse} ${v.text} `;
-    });
-    refLabel = `${book ? book.name : bookId} ${chapter}`;
+    vStart = 1;
+    vEnd = verses.length;
+  } else if (verseRange.includes('-')) {
+    [vStart, vEnd] = verseRange.split('-').map(Number);
   } else {
-    let vStart, vEnd;
-    if (verseRange.includes('-')) {
-      [vStart, vEnd] = verseRange.split('-').map(Number);
-    } else {
-      vStart = vEnd = parseInt(verseRange, 10);
-    }
-    for (let v = vStart; v <= vEnd; v++) {
-      const verse = BibleEngine.getVerse(bookId, chapter, v);
-      if (!verse) continue;
-      translation = verse.translation;
-      text += (vEnd > vStart ? `${v} ` : '') + verse.text + ' ';
-    }
-    refLabel = vEnd > vStart
-      ? `${book ? book.name : bookId} ${chapter}:${vStart}-${vEnd}`
-      : `${book ? book.name : bookId} ${chapter}:${vStart}`;
+    vStart = vEnd = parseInt(verseRange, 10);
   }
 
-  document.getElementById('verse-ref-modal-title').textContent =
-    translation ? `${refLabel} (${translation})` : refLabel;
+  let text = '';
+  verses.filter(v => v.verse >= vStart && v.verse <= vEnd).forEach(v => {
+    text += (vEnd > vStart ? `${v.verse} ` : '') + v.text + ' ';
+  });
+
+  const refLabel = verseRange === undefined
+    ? `${book ? book.name : bookId} ${chapter}`
+    : (vEnd > vStart
+        ? `${book ? book.name : bookId} ${chapter}:${vStart}-${vEnd}`
+        : `${book ? book.name : bookId} ${chapter}:${vStart}`);
+
+  const translationLabel = source === 'esv-live' ? 'ESV' : BibleEngine.getActiveTranslation();
+
+  document.getElementById('verse-ref-modal-title').textContent = `${refLabel} (${translationLabel})`;
   document.getElementById('verse-ref-modal-text').textContent = text.trim() || 'Verse not found.';
-  document.getElementById('verse-ref-modal').classList.add('show');
+  const attrEl = document.getElementById('verse-ref-modal-attribution');
+  if (attrEl) attrEl.innerHTML = bibleAttributionHtml(source);
 }
 
 function closeVerseRefModal() {
@@ -2185,6 +2193,26 @@ function bibleAttributionHtml(source) {
   `;
 }
 
+/**
+ * Resolve a chapter's verses from the live ESV API when a key is configured,
+ * falling back to local/offline sample data on any failure. Used by both the
+ * chapter reader and the verse-ref detection modal so they never disagree
+ * about which source is active.
+ * Returns { verses: [{verse, text}], source: 'esv-live' | 'local' }
+ */
+async function getChapterAnySource(bookId, chapter) {
+  if (window.BibleEngine && BibleEngine.hasESVApiKey()) {
+    try {
+      const verses = await BibleEngine.fetchChapterLive(bookId, chapter);
+      return { verses, source: 'esv-live' };
+    } catch (e) {
+      console.warn('[SermonNotes] ESV live fetch failed, falling back to offline sample data:', e.message);
+      toast('⚠️ Couldn\'t reach ESV.org — showing offline sample text for this chapter.');
+    }
+  }
+  return { verses: BibleEngine.getChapter(bookId, chapter), source: 'local' };
+}
+
 async function renderBibleChapter() {
   if (!window.BibleEngine) return;
   const bookId = document.getElementById('bible-book-select').value;
@@ -2200,24 +2228,13 @@ async function renderBibleChapter() {
 
   const myToken = ++_bibleRenderToken;
 
-  // Try the live ESV API first (if a key is configured); fall back to the
-  // local/offline sample data on any failure (no key, network, rate limit).
   if (BibleEngine.hasESVApiKey()) {
     contentEl.innerHTML = `<div class="bible-loading" style="padding:2rem 0;text-align:center;color:var(--text-muted);font-size:0.85rem;">Loading ${book.name} ${chapter} from ESV.org…</div>`;
-    try {
-      const liveVerses = await BibleEngine.fetchChapterLive(bookId, chapter);
-      if (myToken !== _bibleRenderToken) return; // a newer navigation happened meanwhile
-      contentEl.innerHTML = renderVerseRows(bookId, chapter, liveVerses) + bibleAttributionHtml('esv-live');
-      return;
-    } catch (e) {
-      console.warn('[SermonNotes] ESV live fetch failed, falling back to offline sample data:', e.message);
-      if (myToken !== _bibleRenderToken) return;
-      toast('⚠️ Couldn\'t reach ESV.org — showing offline sample text for this chapter.');
-    }
   }
 
-  const verses = BibleEngine.getChapter(bookId, chapter);
-  contentEl.innerHTML = renderVerseRows(bookId, chapter, verses);
+  const { verses, source } = await getChapterAnySource(bookId, chapter);
+  if (myToken !== _bibleRenderToken) return; // a newer navigation happened meanwhile
+  contentEl.innerHTML = renderVerseRows(bookId, chapter, verses) + bibleAttributionHtml(source);
 }
 
 /* ═══════════════════════════════════════════════════════════════
