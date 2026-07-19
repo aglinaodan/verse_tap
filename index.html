@@ -190,6 +190,12 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .book-link:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    .division-title {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); opacity: 0.75;
+      margin: 0.55rem 0 0.15rem; padding-left: 0.15rem;
+    }
+    .division-title:first-child { margin-top: 0; }
 
     /* ── Theme picker ── */
     .theme-dot {
@@ -535,6 +541,8 @@
       color: var(--accent); vertical-align: middle; margin-left: 0.3rem;
     }
     .verse-note-badge-count { font-size: 0.65rem; font-weight: 700; }
+    .bible-esv-attribution a { color: var(--accent); text-decoration: none; }
+    .bible-esv-attribution a:hover { text-decoration: underline; }
 
     #highlight-color-picker {
       flex-shrink: 0; display: none; align-items: center; justify-content: center;
@@ -1402,10 +1410,20 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
+
+/* ═══════════════════════════════════════════════════════════════
+   ESV LIVE API  (api.esv.org)
+   Free for non-commercial/church use. Register at api.esv.org to get
+   your own key — same "visible in page source" trust model as the
+   other keys in this file (see note above). Per Crossway's terms this
+   app only fetches on demand and never caches more than one chapter
+   at a time (see esv_version.js).
+════════════════════════════════════════════════════════════════ */
+const ESV_API_KEY = 'PASTE_YOUR_ESV_API_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════════════════
    APP STATE
@@ -1597,6 +1615,9 @@ async function runAutoCleanup(allDocs) {
 async function initApp() {
   await initFirestore();
   loadAppearancePrefs();
+  if (window.BibleEngine && ESV_API_KEY && !ESV_API_KEY.startsWith('PASTE_')) {
+    BibleEngine.configureESVApi({ apiKey: ESV_API_KEY });
+  }
   buildBibleNav();
   populateBibleBook();
   populateBibleTranslations();
@@ -1730,18 +1751,20 @@ function toggleBibleAccordion() {
 /* ═══════════════════════════════════════════════════════════════
    BUILD BIBLE NAVIGATION LISTS
 ════════════════════════════════════════════════════════════════ */
+function renderDivisionBookList(testament) {
+  const groups = BibleEngine.getTestamentGrouped(testament);
+  return groups.map(group => `
+    <div class="division-title">${group.division}</div>
+    ${group.books.map(b =>
+      `<div class="book-link" onclick="openBibleBook('${b.id}')" title="${b.name} — ${group.division}">${b.name}</div>`
+    ).join('')}
+  `).join('');
+}
+
 function buildBibleNav() {
   if (!window.BibleEngine) return;
-  const otBooks = BibleEngine.getTestament('OT');
-  const ntBooks = BibleEngine.getTestament('NT');
-
-  document.getElementById('ot-book-list').innerHTML = otBooks.map(b =>
-    `<div class="book-link" onclick="openBibleBook('${b.id}')" title="${b.name}">${b.name}</div>`
-  ).join('');
-
-  document.getElementById('nt-book-list').innerHTML = ntBooks.map(b =>
-    `<div class="book-link" onclick="openBibleBook('${b.id}')" title="${b.name}">${b.name}</div>`
-  ).join('');
+  document.getElementById('ot-book-list').innerHTML = renderDivisionBookList('OT');
+  document.getElementById('nt-book-list').innerHTML = renderDivisionBookList('NT');
 }
 
 function openBibleBook(bookId) {
@@ -1755,19 +1778,22 @@ function openBibleBook(bookId) {
 /* ═══════════════════════════════════════════════════════════════
    BIBLE READER
 ════════════════════════════════════════════════════════════════ */
+function renderDivisionOptgroups(testament, testamentLabel) {
+  const groups = BibleEngine.getTestamentGrouped(testament);
+  return groups.map(group => `
+    <optgroup label="${testamentLabel} — ${group.division}">
+      ${group.books.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
+    </optgroup>
+  `).join('');
+}
+
 function populateBibleBook() {
   if (!window.BibleEngine) return;
   const sel = document.getElementById('bible-book-select');
-  const otBooks = BibleEngine.getTestament('OT');
-  const ntBooks = BibleEngine.getTestament('NT');
 
   sel.innerHTML = `
-    <optgroup label="Old Testament">
-      ${otBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
-    </optgroup>
-    <optgroup label="New Testament">
-      ${ntBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
-    </optgroup>
+    ${renderDivisionOptgroups('OT', 'Old Testament')}
+    ${renderDivisionOptgroups('NT', 'New Testament')}
   `;
   sel.value = 'GEN';
   populateBibleChapters('GEN');
@@ -1799,7 +1825,8 @@ function getAllBooksOrdered() {
 }
 
 function updateChapterNavBar(bookId, chapter, book) {
-  document.getElementById('bible-nav-current').textContent = `${book.name} ${chapter}`;
+  document.getElementById('bible-nav-current').textContent =
+    `${book.name} ${chapter}${book.division ? ' · ' + book.division : ''}`;
   const books = getAllBooksOrdered();
   const idx = books.findIndex(b => b.id === bookId);
   document.getElementById('bible-prev-btn').disabled = (chapter === 1 && idx === 0);
@@ -2122,29 +2149,18 @@ function renderVerseWords(text, key, globalStart) {
   return { html, wordCount: localIdx };
 }
 
-function renderBibleChapter() {
-  if (!window.BibleEngine) return;
-  const bookId = document.getElementById('bible-book-select').value;
-  const chapter = parseInt(document.getElementById('bible-chapter-select').value) || 1;
-  const verses = BibleEngine.getChapter(bookId, chapter);
-  const book = BibleEngine.findBook(bookId);
-  const tid = BibleEngine.getActiveTranslation();
+let _bibleRenderToken = 0;
 
-  document.getElementById('bible-book-label').textContent = book.name;
-  document.getElementById('bible-chapter-label').textContent = chapter;
-  document.getElementById('bible-version-label').textContent = tid;
-  updateChapterNavBar(bookId, chapter, book);
-
+function renderVerseRows(bookId, chapter, verses) {
   chapterWordIndex = [];
   let runningGlobalIdx = 0;
 
-  document.getElementById('bible-content').innerHTML = `
-    ${verses.map(v => {
-      const key = `${bookId}:${chapter}:${v.verse}`;
-      const noteCount = versesInNotes.get(key) || 0;
-      const { html: wordsHtml, wordCount } = renderVerseWords(v.text, key, runningGlobalIdx);
-      runningGlobalIdx += wordCount;
-      return `
+  return verses.map(v => {
+    const key = `${bookId}:${chapter}:${v.verse}`;
+    const noteCount = versesInNotes.get(key) || 0;
+    const { html: wordsHtml, wordCount } = renderVerseWords(v.text, key, runningGlobalIdx);
+    runningGlobalIdx += wordCount;
+    return `
       <div class="verse-row"
            id="verse-${bookId}-${chapter}-${v.verse}"
            data-book-id="${bookId}" data-chapter="${chapter}" data-verse="${v.verse}">
@@ -2156,8 +2172,52 @@ function renderBibleChapter() {
           </span>
         ` : ''}</span>
       </div>
-    `;}).join('')}
+    `;
+  }).join('');
+}
+
+function bibleAttributionHtml(source) {
+  if (source !== 'esv-live') return '';
+  return `
+    <div class="bible-esv-attribution" style="margin-top:1.25rem;padding-top:0.75rem;border-top:1px solid var(--border-color, rgba(255,255,255,0.08));font-size:0.7rem;color:var(--text-muted);line-height:1.5;">
+      ${BibleEngine.ESV_COPYRIGHT} <a href="https://www.esv.org" target="_blank" rel="noopener">www.esv.org</a>
+    </div>
   `;
+}
+
+async function renderBibleChapter() {
+  if (!window.BibleEngine) return;
+  const bookId = document.getElementById('bible-book-select').value;
+  const chapter = parseInt(document.getElementById('bible-chapter-select').value) || 1;
+  const book = BibleEngine.findBook(bookId);
+  const tid = BibleEngine.getActiveTranslation();
+  const contentEl = document.getElementById('bible-content');
+
+  document.getElementById('bible-book-label').textContent = book.name;
+  document.getElementById('bible-chapter-label').textContent = chapter;
+  document.getElementById('bible-version-label').textContent = tid;
+  updateChapterNavBar(bookId, chapter, book);
+
+  const myToken = ++_bibleRenderToken;
+
+  // Try the live ESV API first (if a key is configured); fall back to the
+  // local/offline sample data on any failure (no key, network, rate limit).
+  if (BibleEngine.hasESVApiKey()) {
+    contentEl.innerHTML = `<div class="bible-loading" style="padding:2rem 0;text-align:center;color:var(--text-muted);font-size:0.85rem;">Loading ${book.name} ${chapter} from ESV.org…</div>`;
+    try {
+      const liveVerses = await BibleEngine.fetchChapterLive(bookId, chapter);
+      if (myToken !== _bibleRenderToken) return; // a newer navigation happened meanwhile
+      contentEl.innerHTML = renderVerseRows(bookId, chapter, liveVerses) + bibleAttributionHtml('esv-live');
+      return;
+    } catch (e) {
+      console.warn('[SermonNotes] ESV live fetch failed, falling back to offline sample data:', e.message);
+      if (myToken !== _bibleRenderToken) return;
+      toast('⚠️ Couldn\'t reach ESV.org — showing offline sample text for this chapter.');
+    }
+  }
+
+  const verses = BibleEngine.getChapter(bookId, chapter);
+  contentEl.innerHTML = renderVerseRows(bookId, chapter, verses);
 }
 
 /* ═══════════════════════════════════════════════════════════════

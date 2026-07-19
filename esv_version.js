@@ -24,75 +24,81 @@
   ───────────────────────────────────────────────────────────────────────── */
   const CANON = {
     OT: [
-      { id: 'GEN', name: 'Genesis',        abbr: 'Gen',   chapters: 50 },
-      { id: 'EXO', name: 'Exodus',         abbr: 'Exo',   chapters: 40 },
-      { id: 'LEV', name: 'Leviticus',      abbr: 'Lev',   chapters: 27 },
-      { id: 'NUM', name: 'Numbers',        abbr: 'Num',   chapters: 36 },
-      { id: 'DEU', name: 'Deuteronomy',    abbr: 'Deu',   chapters: 34 },
-      { id: 'JOS', name: 'Joshua',         abbr: 'Jos',   chapters: 24 },
-      { id: 'JDG', name: 'Judges',         abbr: 'Jdg',   chapters: 21 },
-      { id: 'RUT', name: 'Ruth',           abbr: 'Rut',   chapters: 4  },
-      { id: '1SA', name: '1 Samuel',       abbr: '1Sa',   chapters: 31 },
-      { id: '2SA', name: '2 Samuel',       abbr: '2Sa',   chapters: 24 },
-      { id: '1KI', name: '1 Kings',        abbr: '1Ki',   chapters: 22 },
-      { id: '2KI', name: '2 Kings',        abbr: '2Ki',   chapters: 25 },
-      { id: '1CH', name: '1 Chronicles',   abbr: '1Ch',   chapters: 29 },
-      { id: '2CH', name: '2 Chronicles',   abbr: '2Ch',   chapters: 36 },
-      { id: 'EZR', name: 'Ezra',           abbr: 'Ezr',   chapters: 10 },
-      { id: 'NEH', name: 'Nehemiah',       abbr: 'Neh',   chapters: 13 },
-      { id: 'EST', name: 'Esther',         abbr: 'Est',   chapters: 10 },
-      { id: 'JOB', name: 'Job',            abbr: 'Job',   chapters: 42 },
-      { id: 'PSA', name: 'Psalms',         abbr: 'Psa',   chapters: 150},
-      { id: 'PRO', name: 'Proverbs',       abbr: 'Pro',   chapters: 31 },
-      { id: 'ECC', name: 'Ecclesiastes',   abbr: 'Ecc',   chapters: 12 },
-      { id: 'SNG', name: 'Song of Solomon',abbr: 'Sng',   chapters: 8  },
-      { id: 'ISA', name: 'Isaiah',         abbr: 'Isa',   chapters: 66 },
-      { id: 'JER', name: 'Jeremiah',       abbr: 'Jer',   chapters: 52 },
-      { id: 'LAM', name: 'Lamentations',   abbr: 'Lam',   chapters: 5  },
-      { id: 'EZK', name: 'Ezekiel',        abbr: 'Ezk',   chapters: 48 },
-      { id: 'DAN', name: 'Daniel',         abbr: 'Dan',   chapters: 12 },
-      { id: 'HOS', name: 'Hosea',          abbr: 'Hos',   chapters: 14 },
-      { id: 'JOL', name: 'Joel',           abbr: 'Jol',   chapters: 3  },
-      { id: 'AMO', name: 'Amos',           abbr: 'Amo',   chapters: 9  },
-      { id: 'OBA', name: 'Obadiah',        abbr: 'Oba',   chapters: 1  },
-      { id: 'JON', name: 'Jonah',          abbr: 'Jon',   chapters: 4  },
-      { id: 'MIC', name: 'Micah',          abbr: 'Mic',   chapters: 7  },
-      { id: 'NAH', name: 'Nahum',          abbr: 'Nah',   chapters: 3  },
-      { id: 'HAB', name: 'Habakkuk',       abbr: 'Hab',   chapters: 3  },
-      { id: 'ZEP', name: 'Zephaniah',      abbr: 'Zep',   chapters: 3  },
-      { id: 'HAG', name: 'Haggai',         abbr: 'Hag',   chapters: 2  },
-      { id: 'ZEC', name: 'Zechariah',      abbr: 'Zec',   chapters: 14 },
-      { id: 'MAL', name: 'Malachi',        abbr: 'Mal',   chapters: 4  },
+      { id: 'GEN', name: 'Genesis',        abbr: 'Gen',   chapters: 50,  division: 'Law' },
+      { id: 'EXO', name: 'Exodus',         abbr: 'Exo',   chapters: 40,  division: 'Law' },
+      { id: 'LEV', name: 'Leviticus',      abbr: 'Lev',   chapters: 27,  division: 'Law' },
+      { id: 'NUM', name: 'Numbers',        abbr: 'Num',   chapters: 36,  division: 'Law' },
+      { id: 'DEU', name: 'Deuteronomy',    abbr: 'Deu',   chapters: 34,  division: 'Law' },
+      { id: 'JOS', name: 'Joshua',         abbr: 'Jos',   chapters: 24,  division: 'History' },
+      { id: 'JDG', name: 'Judges',         abbr: 'Jdg',   chapters: 21,  division: 'History' },
+      { id: 'RUT', name: 'Ruth',           abbr: 'Rut',   chapters: 4,   division: 'History' },
+      { id: '1SA', name: '1 Samuel',       abbr: '1Sa',   chapters: 31,  division: 'History' },
+      { id: '2SA', name: '2 Samuel',       abbr: '2Sa',   chapters: 24,  division: 'History' },
+      { id: '1KI', name: '1 Kings',        abbr: '1Ki',   chapters: 22,  division: 'History' },
+      { id: '2KI', name: '2 Kings',        abbr: '2Ki',   chapters: 25,  division: 'History' },
+      { id: '1CH', name: '1 Chronicles',   abbr: '1Ch',   chapters: 29,  division: 'History' },
+      { id: '2CH', name: '2 Chronicles',   abbr: '2Ch',   chapters: 36,  division: 'History' },
+      { id: 'EZR', name: 'Ezra',           abbr: 'Ezr',   chapters: 10,  division: 'History' },
+      { id: 'NEH', name: 'Nehemiah',       abbr: 'Neh',   chapters: 13,  division: 'History' },
+      { id: 'EST', name: 'Esther',         abbr: 'Est',   chapters: 10,  division: 'History' },
+      { id: 'JOB', name: 'Job',            abbr: 'Job',   chapters: 42,  division: 'Wisdom' },
+      { id: 'PSA', name: 'Psalms',         abbr: 'Psa',   chapters: 150, division: 'Wisdom' },
+      { id: 'PRO', name: 'Proverbs',       abbr: 'Pro',   chapters: 31,  division: 'Wisdom' },
+      { id: 'ECC', name: 'Ecclesiastes',   abbr: 'Ecc',   chapters: 12,  division: 'Wisdom' },
+      { id: 'SNG', name: 'Song of Solomon',abbr: 'Sng',   chapters: 8,   division: 'Wisdom' },
+      { id: 'ISA', name: 'Isaiah',         abbr: 'Isa',   chapters: 66,  division: 'Major Prophets' },
+      { id: 'JER', name: 'Jeremiah',       abbr: 'Jer',   chapters: 52,  division: 'Major Prophets' },
+      { id: 'LAM', name: 'Lamentations',   abbr: 'Lam',   chapters: 5,   division: 'Major Prophets' },
+      { id: 'EZK', name: 'Ezekiel',        abbr: 'Ezk',   chapters: 48,  division: 'Major Prophets' },
+      { id: 'DAN', name: 'Daniel',         abbr: 'Dan',   chapters: 12,  division: 'Major Prophets' },
+      { id: 'HOS', name: 'Hosea',          abbr: 'Hos',   chapters: 14,  division: 'Minor Prophets' },
+      { id: 'JOL', name: 'Joel',           abbr: 'Jol',   chapters: 3,   division: 'Minor Prophets' },
+      { id: 'AMO', name: 'Amos',           abbr: 'Amo',   chapters: 9,   division: 'Minor Prophets' },
+      { id: 'OBA', name: 'Obadiah',        abbr: 'Oba',   chapters: 1,   division: 'Minor Prophets' },
+      { id: 'JON', name: 'Jonah',          abbr: 'Jon',   chapters: 4,   division: 'Minor Prophets' },
+      { id: 'MIC', name: 'Micah',          abbr: 'Mic',   chapters: 7,   division: 'Minor Prophets' },
+      { id: 'NAH', name: 'Nahum',          abbr: 'Nah',   chapters: 3,   division: 'Minor Prophets' },
+      { id: 'HAB', name: 'Habakkuk',       abbr: 'Hab',   chapters: 3,   division: 'Minor Prophets' },
+      { id: 'ZEP', name: 'Zephaniah',      abbr: 'Zep',   chapters: 3,   division: 'Minor Prophets' },
+      { id: 'HAG', name: 'Haggai',         abbr: 'Hag',   chapters: 2,   division: 'Minor Prophets' },
+      { id: 'ZEC', name: 'Zechariah',      abbr: 'Zec',   chapters: 14,  division: 'Minor Prophets' },
+      { id: 'MAL', name: 'Malachi',        abbr: 'Mal',   chapters: 4,   division: 'Minor Prophets' },
     ],
     NT: [
-      { id: 'MAT', name: 'Matthew',        abbr: 'Mat',   chapters: 28 },
-      { id: 'MRK', name: 'Mark',           abbr: 'Mrk',   chapters: 16 },
-      { id: 'LUK', name: 'Luke',           abbr: 'Luk',   chapters: 24 },
-      { id: 'JHN', name: 'John',           abbr: 'Jhn',   chapters: 21 },
-      { id: 'ACT', name: 'Acts',           abbr: 'Act',   chapters: 28 },
-      { id: 'ROM', name: 'Romans',         abbr: 'Rom',   chapters: 16 },
-      { id: '1CO', name: '1 Corinthians',  abbr: '1Co',   chapters: 16 },
-      { id: '2CO', name: '2 Corinthians',  abbr: '2Co',   chapters: 13 },
-      { id: 'GAL', name: 'Galatians',      abbr: 'Gal',   chapters: 6  },
-      { id: 'EPH', name: 'Ephesians',      abbr: 'Eph',   chapters: 6  },
-      { id: 'PHP', name: 'Philippians',    abbr: 'Php',   chapters: 4  },
-      { id: 'COL', name: 'Colossians',     abbr: 'Col',   chapters: 4  },
-      { id: '1TH', name: '1 Thessalonians',abbr: '1Th',   chapters: 5  },
-      { id: '2TH', name: '2 Thessalonians',abbr: '2Th',   chapters: 3  },
-      { id: '1TI', name: '1 Timothy',      abbr: '1Ti',   chapters: 6  },
-      { id: '2TI', name: '2 Timothy',      abbr: '2Ti',   chapters: 4  },
-      { id: 'TIT', name: 'Titus',          abbr: 'Tit',   chapters: 3  },
-      { id: 'PHM', name: 'Philemon',       abbr: 'Phm',   chapters: 1  },
-      { id: 'HEB', name: 'Hebrews',        abbr: 'Heb',   chapters: 13 },
-      { id: 'JAS', name: 'James',          abbr: 'Jas',   chapters: 5  },
-      { id: '1PE', name: '1 Peter',        abbr: '1Pe',   chapters: 5  },
-      { id: '2PE', name: '2 Peter',        abbr: '2Pe',   chapters: 3  },
-      { id: '1JN', name: '1 John',         abbr: '1Jn',   chapters: 5  },
-      { id: '2JN', name: '2 John',         abbr: '2Jn',   chapters: 1  },
-      { id: '3JN', name: '3 John',         abbr: '3Jn',   chapters: 1  },
-      { id: 'JUD', name: 'Jude',           abbr: 'Jud',   chapters: 1  },
-      { id: 'REV', name: 'Revelation',     abbr: 'Rev',   chapters: 22 },
+      { id: 'MAT', name: 'Matthew',        abbr: 'Mat',   chapters: 28,  division: 'Gospels' },
+      { id: 'MRK', name: 'Mark',           abbr: 'Mrk',   chapters: 16,  division: 'Gospels' },
+      { id: 'LUK', name: 'Luke',           abbr: 'Luk',   chapters: 24,  division: 'Gospels' },
+      { id: 'JHN', name: 'John',           abbr: 'Jhn',   chapters: 21,  division: 'Gospels' },
+      { id: 'ACT', name: 'Acts',           abbr: 'Act',   chapters: 28,  division: 'History' },
+      { id: 'ROM', name: 'Romans',         abbr: 'Rom',   chapters: 16,  division: 'Pauline Epistles' },
+      { id: '1CO', name: '1 Corinthians',  abbr: '1Co',   chapters: 16,  division: 'Pauline Epistles' },
+      { id: '2CO', name: '2 Corinthians',  abbr: '2Co',   chapters: 13,  division: 'Pauline Epistles' },
+      { id: 'GAL', name: 'Galatians',      abbr: 'Gal',   chapters: 6,   division: 'Pauline Epistles' },
+      { id: 'EPH', name: 'Ephesians',      abbr: 'Eph',   chapters: 6,   division: 'Pauline Epistles' },
+      { id: 'PHP', name: 'Philippians',    abbr: 'Php',   chapters: 4,   division: 'Pauline Epistles' },
+      { id: 'COL', name: 'Colossians',     abbr: 'Col',   chapters: 4,   division: 'Pauline Epistles' },
+      { id: '1TH', name: '1 Thessalonians',abbr: '1Th',   chapters: 5,   division: 'Pauline Epistles' },
+      { id: '2TH', name: '2 Thessalonians',abbr: '2Th',   chapters: 3,   division: 'Pauline Epistles' },
+      { id: '1TI', name: '1 Timothy',      abbr: '1Ti',   chapters: 6,   division: 'Pauline Epistles' },
+      { id: '2TI', name: '2 Timothy',      abbr: '2Ti',   chapters: 4,   division: 'Pauline Epistles' },
+      { id: 'TIT', name: 'Titus',          abbr: 'Tit',   chapters: 3,   division: 'Pauline Epistles' },
+      { id: 'PHM', name: 'Philemon',       abbr: 'Phm',   chapters: 1,   division: 'Pauline Epistles' },
+      { id: 'HEB', name: 'Hebrews',        abbr: 'Heb',   chapters: 13,  division: 'General Epistles' },
+      { id: 'JAS', name: 'James',          abbr: 'Jas',   chapters: 5,   division: 'General Epistles' },
+      { id: '1PE', name: '1 Peter',        abbr: '1Pe',   chapters: 5,   division: 'General Epistles' },
+      { id: '2PE', name: '2 Peter',        abbr: '2Pe',   chapters: 3,   division: 'General Epistles' },
+      { id: '1JN', name: '1 John',         abbr: '1Jn',   chapters: 5,   division: 'General Epistles' },
+      { id: '2JN', name: '2 John',         abbr: '2Jn',   chapters: 1,   division: 'General Epistles' },
+      { id: '3JN', name: '3 John',         abbr: '3Jn',   chapters: 1,   division: 'General Epistles' },
+      { id: 'JUD', name: 'Jude',           abbr: 'Jud',   chapters: 1,   division: 'General Epistles' },
+      { id: 'REV', name: 'Revelation',     abbr: 'Rev',   chapters: 22,  division: 'Prophecy' },
     ]
+  };
+
+  /* Ordered division names per testament, used for grouped UI rendering */
+  const DIVISIONS = {
+    OT: ['Law', 'History', 'Wisdom', 'Major Prophets', 'Minor Prophets'],
+    NT: ['Gospels', 'History', 'Pauline Epistles', 'General Epistles', 'Prophecy']
   };
 
   /* ─────────────────────────────────────────────────────────────────────────
@@ -302,6 +308,24 @@
     return testament === 'NT' ? [...CANON.NT] : [...CANON.OT];
   }
 
+  /** Return the ordered list of division names for a testament ('OT' | 'NT') */
+  function getDivisions(testament) {
+    return testament === 'NT' ? [...DIVISIONS.NT] : [...DIVISIONS.OT];
+  }
+
+  /**
+   * Return a testament's books grouped by division, in canonical order.
+   * Returns an array of { division: String, books: [...] }
+   */
+  function getTestamentGrouped(testament) {
+    const books = getTestament(testament);
+    const order = getDivisions(testament);
+    return order.map(division => ({
+      division,
+      books: books.filter(b => b.division === division)
+    }));
+  }
+
   /** Find a single book by ID, name, or abbreviation (case-insensitive) */
   function findBook(query) {
     const q = String(query).toLowerCase();
@@ -322,6 +346,94 @@
     if (!book) return 0;
     const counts = VERSE_COUNTS[book.id];
     return counts ? (counts[chapter - 1] || 0) : 0;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     ESV LIVE API  (api.esv.org)
+     Crossway's free non-commercial API. Per their terms, we do NOT persist
+     the fetched text beyond a single in-memory "last chapter" cache — this
+     app is a live lookup client, not a bulk offline copy of the ESV.
+     Register your own key via BibleEngine.configureESVApi({ apiKey }).
+  ───────────────────────────────────────────────────────────────────────── */
+  const ESV_COPYRIGHT =
+    'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard ' +
+    'Version®), copyright © 2001 by Crossway, a publishing ministry of Good News ' +
+    'Publishers. Used by permission. All rights reserved.';
+
+  const _esvApi = {
+    apiKey: null,
+    endpoint: 'https://api.esv.org/v3/passage/text/'
+  };
+
+  // Holds AT MOST one chapter's worth of fetched verses at a time.
+  let _liveCache = { key: null, verses: null };
+
+  function configureESVApi({ apiKey } = {}) {
+    _esvApi.apiKey = apiKey || null;
+    return BibleEngine;
+  }
+
+  function hasESVApiKey() {
+    return !!_esvApi.apiKey;
+  }
+
+  /** Parse the ESV API's "[1] text [2] text" verse-numbered string into { n: text } */
+  function _parseESVPassageText(raw) {
+    const cleaned = raw
+      .replace(/\s*\(ESV\)\s*$/m, '')   // strip trailing short copyright tag if present
+      .trim();
+    const parts = cleaned.split(/\[(\d+)\]\s*/).filter(Boolean);
+    const verses = {};
+    for (let i = 0; i < parts.length; i += 2) {
+      const num = parseInt(parts[i], 10);
+      const text = (parts[i + 1] || '').trim();
+      if (!isNaN(num) && text) verses[num] = text;
+    }
+    return verses;
+  }
+
+  /**
+   * Fetch a chapter live from the ESV API.
+   * Returns a Promise<Array<{ verse, text }>>.
+   * Falls back to throwing if no API key is configured or the request fails —
+   * callers should catch and fall back to getChapter() for offline/local data.
+   */
+  async function fetchChapterLive(bookId, chapter) {
+    if (!_esvApi.apiKey) throw new Error('ESV API key not configured. Call configureESVApi({ apiKey }) first.');
+    const book = findBook(bookId);
+    if (!book) throw new Error(`Book "${bookId}" not found.`);
+
+    const cacheKey = `${book.id}:${chapter}`;
+    if (_liveCache.key === cacheKey && _liveCache.verses) {
+      return _toVerseArray(book.id, chapter, _liveCache.verses);
+    }
+
+    const q = encodeURIComponent(`${book.name} ${chapter}`);
+    const url = `${_esvApi.endpoint}?q=${q}&include-headings=false&include-footnotes=false` +
+      `&include-verse-numbers=true&include-short-copyright=false&include-passage-references=false` +
+      `&include-first-verse-numbers=true`;
+
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Token ${_esvApi.apiKey}` }
+    });
+    if (!res.ok) throw new Error(`ESV API request failed: ${res.status} ${res.statusText}`);
+    const data = await res.json();
+    const passage = (data.passages && data.passages[0]) || '';
+    const verses = _parseESVPassageText(passage);
+
+    // Replace cache wholesale — never accumulate more than one chapter.
+    _liveCache = { key: cacheKey, verses };
+
+    return _toVerseArray(book.id, chapter, verses);
+  }
+
+  function _toVerseArray(bookId, chapter, verseMap) {
+    const verseCount = getVerseCount(bookId, chapter);
+    const result = [];
+    for (let v = 1; v <= verseCount; v++) {
+      result.push({ verse: v, text: verseMap[v] || `[verse ${v} unavailable from API response]` });
+    }
+    return result;
   }
 
   /**
@@ -467,14 +579,21 @@
   const BibleEngine = {
     version: '1.0.0',
     CANON,
+    DIVISIONS,
     VERSE_COUNTS,
     getAllBooks,
     getTestament,
+    getDivisions,
+    getTestamentGrouped,
     findBook,
     getChapterCount,
     getVerseCount,
     getChapter,
     getVerse,
+    configureESVApi,
+    hasESVApiKey,
+    fetchChapterLive,
+    ESV_COPYRIGHT,
     registerTranslation,
     registerVerseData,
     setActiveTranslation,
