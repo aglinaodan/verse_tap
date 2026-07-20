@@ -655,16 +655,18 @@
     .tag-pill:active { transform: scale(0.95); }
     .note-page-divider { border-bottom: 1px solid var(--border); }
     .note-page-content-textarea {
-      flex: 1; width: 100%; min-height: 40vh; background: none; border: none; outline: none;
-      resize: none; color: var(--text-primary); font-size: 0.95rem; line-height: 1.75;
-      font-family: inherit;
+      flex: 1; width: 100%; min-height: 40vh; color: var(--text-primary);
+      font-size: 0.95rem; line-height: 1.75; font-family: inherit;
     }
-    .note-page-content-textarea::placeholder { color: var(--text-muted); opacity: 0.65; }
+    .note-content-editable { outline: none; word-wrap: break-word; }
+    .note-content-editable:empty:before {
+      content: attr(data-placeholder); color: var(--text-muted); opacity: 0.65; pointer-events: none;
+    }
 
-    /* ── Note formatting toolbar ── */
+    /* ── Note formatting toolbar (sits as its own bar just above Cancel/Save) ── */
     .note-toolbar {
       display: flex; align-items: center; gap: 0.3rem; overflow-x: auto;
-      padding-bottom: 0.6rem; margin-bottom: 0.4rem; flex-shrink: 0;
+      padding: 0.5rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0;
       -ms-overflow-style: none; scrollbar-width: none; position: relative;
     }
     .note-toolbar::-webkit-scrollbar { display: none; }
@@ -678,7 +680,7 @@
     .note-toolbar-btn:active { transform: scale(0.92); }
     .note-toolbar-btn-text { font-size: 0.78rem; font-weight: 700; }
     .note-color-popover {
-      display: none; position: absolute; top: 100%; left: 0; margin-top: 0.35rem; z-index: 20;
+      display: none; position: absolute; bottom: 100%; left: 1.25rem; margin-bottom: 0.35rem; z-index: 20;
       background: var(--bg-nav); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 0.5rem; gap: 0.4rem; box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     }
@@ -693,16 +695,19 @@
       display: flex; align-items: center; justify-content: center;
     }
 
-    /* ── Rendered rich-text output (read-only viewer) ── */
-    .note-page-content-display h1, .note-page-content-display h2, .note-page-content-display h3 {
+    /* ── Rich-text output shared by the live editor and the read-only viewer ── */
+    .note-page-content-display h1, .note-page-content-display h2, .note-page-content-display h3,
+    .note-content-editable h1, .note-content-editable h2, .note-content-editable h3 {
       font-weight: 700; line-height: 1.3; margin: 0.9rem 0 0.4rem; color: var(--text-primary);
     }
-    .note-page-content-display h1 { font-size: 1.4rem; }
-    .note-page-content-display h2 { font-size: 1.2rem; }
-    .note-page-content-display h3 { font-size: 1.05rem; }
-    .note-page-content-display hr { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
-    .note-page-content-display ul { margin: 0.3rem 0; padding-left: 1.3rem; }
-    .note-page-content-display li { margin: 0.15rem 0; }
+    .note-page-content-display h1, .note-content-editable h1 { font-size: 1.4rem; }
+    .note-page-content-display h2, .note-content-editable h2 { font-size: 1.2rem; }
+    .note-page-content-display h3, .note-content-editable h3 { font-size: 1.05rem; }
+    .note-page-content-display hr, .note-content-editable hr {
+      border: none; border-top: 1px solid var(--border); margin: 1rem 0;
+    }
+    .note-page-content-display ul, .note-content-editable ul { margin: 0.3rem 0; padding-left: 1.3rem; }
+    .note-page-content-display li, .note-content-editable li { margin: 0.15rem 0; }
     .note-page-content-display {
       font-size: 0.95rem; line-height: 1.8; color: var(--text-primary); white-space: pre-wrap;
     }
@@ -1222,43 +1227,44 @@
       <input id="tag-input" placeholder="Add tag…" onkeydown="handleTagKeydown(event)" />
     </div>
     <div class="note-page-divider" style="margin:1.1rem 0;"></div>
-    <div class="note-toolbar" id="note-toolbar">
-      <button type="button" class="note-toolbar-btn" onclick="wrapNoteSelection('**','**')" title="Bold" aria-label="Bold">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h6a3.5 3.5 0 0 1 0 7H6z"/><path d="M6 11h7a3.5 3.5 0 0 1 0 7H6z"/></svg>
-      </button>
-      <button type="button" class="note-toolbar-btn" onclick="wrapNoteSelection('*','*')" title="Italic" aria-label="Italic">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
-      </button>
-      <button type="button" class="note-toolbar-btn" onclick="wrapNoteSelection('++','++')" title="Underline" aria-label="Underline">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
-      </button>
-      <span class="note-toolbar-sep"></span>
-      <button type="button" class="note-toolbar-btn" onclick="toggleNoteColorPopover()" title="Text color" aria-label="Text color" id="note-color-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.4 0 2-1 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h2c3 0 5-2 5-5 0-5-4.5-9-9-9z"/></svg>
-      </button>
-      <div class="note-color-popover" id="note-color-popover">
-        <button class="note-color-swatch" style="background:#f87171" onclick="applyNoteTextColor('#f87171')" title="Red"></button>
-        <button class="note-color-swatch" style="background:#fb923c" onclick="applyNoteTextColor('#fb923c')" title="Orange"></button>
-        <button class="note-color-swatch" style="background:#facc15" onclick="applyNoteTextColor('#facc15')" title="Yellow"></button>
-        <button class="note-color-swatch" style="background:#4ade80" onclick="applyNoteTextColor('#4ade80')" title="Green"></button>
-        <button class="note-color-swatch" style="background:#60a5fa" onclick="applyNoteTextColor('#60a5fa')" title="Blue"></button>
-        <button class="note-color-swatch" style="background:#c084fc" onclick="applyNoteTextColor('#c084fc')" title="Purple"></button>
-        <button class="note-color-swatch note-color-swatch-clear" onclick="applyNoteTextColor(null)" title="Remove color">✕</button>
-      </div>
-      <span class="note-toolbar-sep"></span>
-      <button type="button" class="note-toolbar-btn" onclick="toggleNoteBulletList()" title="Bullet list" aria-label="Bullet list">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
-      </button>
-      <button type="button" class="note-toolbar-btn" onclick="insertNoteDivider()" title="Divider" aria-label="Divider">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="12" x2="20" y2="12"/></svg>
-      </button>
-      <span class="note-toolbar-sep"></span>
-      <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onclick="toggleNoteHeading(1)" title="Heading 1" aria-label="Heading 1">H1</button>
-      <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onclick="toggleNoteHeading(2)" title="Heading 2" aria-label="Heading 2">H2</button>
-      <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onclick="toggleNoteHeading(3)" title="Heading 3" aria-label="Heading 3">H3</button>
-      <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onclick="toggleNoteHeading(0)" title="Paragraph" aria-label="Paragraph">¶</button>
+    <div class="note-page-content-textarea note-content-editable" id="note-content-input" contenteditable="true"
+         data-placeholder="Your sermon notes, reflections, Scripture references…" oninput="markNoteEditorDirty()"></div>
+  </div>
+  <div class="note-toolbar" id="note-toolbar">
+    <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="execNoteCommand('bold')" title="Bold" aria-label="Bold">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h6a3.5 3.5 0 0 1 0 7H6z"/><path d="M6 11h7a3.5 3.5 0 0 1 0 7H6z"/></svg>
+    </button>
+    <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="execNoteCommand('italic')" title="Italic" aria-label="Italic">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+    </button>
+    <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="execNoteCommand('underline')" title="Underline" aria-label="Underline">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
+    </button>
+    <span class="note-toolbar-sep"></span>
+    <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="toggleNoteColorPopover()" title="Text color" aria-label="Text color" id="note-color-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.4 0 2-1 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h2c3 0 5-2 5-5 0-5-4.5-9-9-9z"/></svg>
+    </button>
+    <div class="note-color-popover" id="note-color-popover">
+      <button class="note-color-swatch" onmousedown="event.preventDefault()" style="background:#f87171" onclick="applyNoteTextColor('#f87171')" title="Red"></button>
+      <button class="note-color-swatch" onmousedown="event.preventDefault()" style="background:#fb923c" onclick="applyNoteTextColor('#fb923c')" title="Orange"></button>
+      <button class="note-color-swatch" onmousedown="event.preventDefault()" style="background:#facc15" onclick="applyNoteTextColor('#facc15')" title="Yellow"></button>
+      <button class="note-color-swatch" onmousedown="event.preventDefault()" style="background:#4ade80" onclick="applyNoteTextColor('#4ade80')" title="Green"></button>
+      <button class="note-color-swatch" onmousedown="event.preventDefault()" style="background:#60a5fa" onclick="applyNoteTextColor('#60a5fa')" title="Blue"></button>
+      <button class="note-color-swatch" onmousedown="event.preventDefault()" style="background:#c084fc" onclick="applyNoteTextColor('#c084fc')" title="Purple"></button>
+      <button class="note-color-swatch note-color-swatch-clear" onmousedown="event.preventDefault()" onclick="applyNoteTextColor(null)" title="Remove color">✕</button>
     </div>
-    <textarea class="note-page-content-textarea" id="note-content-input" placeholder="Your sermon notes, reflections, Scripture references…" oninput="markNoteEditorDirty()"></textarea>
+    <span class="note-toolbar-sep"></span>
+    <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="execNoteCommand('insertUnorderedList')" title="Bullet list" aria-label="Bullet list">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="insertNoteDivider()" title="Divider" aria-label="Divider">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="12" x2="20" y2="12"/></svg>
+    </button>
+    <span class="note-toolbar-sep"></span>
+    <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(1)" title="Heading 1" aria-label="Heading 1">H1</button>
+    <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(2)" title="Heading 2" aria-label="Heading 2">H2</button>
+    <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(3)" title="Heading 3" aria-label="Heading 3">H3</button>
+    <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(0)" title="Paragraph" aria-label="Paragraph">¶</button>
   </div>
   <div class="note-page-footer">
     <button class="btn btn-ghost note-footer-icon-btn" onclick="closeNoteEditor()" aria-label="Cancel" title="Cancel">
@@ -1496,8 +1502,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1509,7 +1515,7 @@ const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
    app only fetches on demand and never caches more than one chapter
    at a time (see esv_version.js).
 ════════════════════════════════════════════════════════════════ */
-const ESV_API_KEY = 'f970b01e30fffa25ba30f3021ac6f0fcccc7f44c';
+const ESV_API_KEY = 'PASTE_YOUR_ESV_API_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════════════════
    APP STATE
@@ -2084,6 +2090,12 @@ function buildVerseRefIndex() {
 }
 
 /** Turn escaped, line-based markers (headings, "---" divider, "- " bullets) into HTML blocks. */
+/** Detect whether stored note content is already real HTML (new editor) vs legacy plain text. */
+function _looksLikeHtml(str) {
+  return /^\s*<[a-z][\s\S]*>/i.test(str || '');
+}
+
+/** Legacy-only: turn "#/##/###" headings, "---" divider, and "- " bullets into HTML blocks. */
 function applyNoteBlockFormatting(html) {
   const lines = html.split('\n');
   const out = [];
@@ -2118,7 +2130,7 @@ function applyNoteBlockFormatting(html) {
   return out.join('\n');
 }
 
-/** Turn inline markers (**bold**, *italic*, ++underline++, {{c:#hex}}color{{/c}}) into HTML. */
+/** Legacy-only: turn **bold**, *italic*, ++underline++, {{c:#hex}}color{{/c}} into HTML. */
 function applyNoteInlineFormatting(html) {
   html = html.replace(/\*\*([^\n*]+?)\*\*/g, '<b>$1</b>');
   html = html.replace(/\*([^\n*]+?)\*/g, '<i>$1</i>');
@@ -2127,10 +2139,24 @@ function applyNoteInlineFormatting(html) {
   return html;
 }
 
-function linkifyVerseRefs(text) {
-  let html = escHtml(text || '');
-  html = applyNoteBlockFormatting(html);
-  html = applyNoteInlineFormatting(html);
+/**
+ * Convert stored note content into HTML for the read-only viewer.
+ * New notes are already real HTML (from the contenteditable editor) —
+ * used as-is. Notes saved before the rich-text editor existed are plain
+ * text with lightweight markers, so those get upgraded through the legacy
+ * parser first. Either way, plain-text Scripture references get linkified
+ * last, on top of the final HTML.
+ */
+function renderNoteContentHtml(content) {
+  const raw = content || '';
+  let html = _looksLikeHtml(raw)
+    ? raw
+    : applyNoteInlineFormatting(applyNoteBlockFormatting(escHtml(raw)));
+  return linkifyVerseRefs(html);
+}
+
+/** Wrap plain-text Scripture references (e.g. "John 3:16") in clickable spans within an HTML string. */
+function linkifyVerseRefs(html) {
   if (!verseRefRegex) return html;
   return html.replace(verseRefRegex, (match, bookName, chapter, v1, v2) => {
     const bookId = verseNameToId[bookName.toLowerCase()];
@@ -2148,9 +2174,15 @@ function linkifyVerseRefs(text) {
   });
 }
 
-/** Strip formatting markers back to plain text, for the note-card preview snippet. */
-function stripNoteFormattingMarkers(text) {
-  return (text || '')
+/** Plain-text preview for note cards — strips HTML tags (new notes) or legacy markers (old notes). */
+function notePreviewText(content) {
+  const raw = content || '';
+  if (_looksLikeHtml(raw)) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = raw;
+    return (tmp.textContent || '').trim();
+  }
+  return raw
     .replace(/\{\{c:#[0-9a-fA-F]{3,6}\}\}/g, '')
     .replace(/\{\{\/c\}\}/g, '')
     .replace(/\+\+/g, '')
@@ -2158,7 +2190,8 @@ function stripNoteFormattingMarkers(text) {
     .replace(/\*/g, '')
     .replace(/^#{1,3}\s+/gm, '')
     .replace(/^-\s+/gm, '')
-    .replace(/^---$/gm, '');
+    .replace(/^---$/gm, '')
+    .trim();
 }
 
 let _verseModalToken = 0;
@@ -2514,20 +2547,22 @@ function getSelectionVerseKeys() {
 
 // Returns the exact selected text, verse by verse (so a selection spanning
 // several verses reads naturally rather than as one run-on string).
+// Reads straight from the rendered word spans rather than re-querying
+// BibleEngine, since that lookup only knows about local/offline sample
+// data and has no idea what was actually fetched from the live ESV API.
 function getSelectionText() {
   const verseKeys = getSelectionVerseKeys();
   return verseKeys.map(key => {
-    const [bookId, chapterStr, verseStr] = key.split(':');
-    const verse = BibleEngine.getVerse(bookId, parseInt(chapterStr, 10), parseInt(verseStr, 10));
-    if (!verse) return '';
-    const tokens = verse.text.split(/\s+/).filter(t => t !== '');
-    const idxs = [];
+    const [, , verseStr] = key.split(':');
+    const words = [];
     for (let i = wordSelectionStartGlobal; i <= wordSelectionEndGlobal; i++) {
       const entry = chapterWordIndex[i];
-      if (entry && entry.verseKey === key) idxs.push(entry.localIdx);
+      if (entry && entry.verseKey === key) {
+        const el = document.querySelector(`.word[data-global-idx="${i}"]`);
+        if (el) words.push(el.textContent);
+      }
     }
-    const words = idxs.map(i => tokens[i]).join(' ');
-    return `${verseStr} ${words}`;
+    return `${verseStr} ${words.join(' ')}`;
   }).join(' ');
 }
 
@@ -2598,9 +2633,9 @@ function createNoteFromVerseSelection() {
   if (!wordSelectionActive) return;
   const refLabel = getSelectionRefLabel();
   const verseKeys = getSelectionVerseKeys();
-  const [firstBookId, firstChapterStr, firstVerseStr] = verseKeys[0].split(':');
-  const firstVerse = BibleEngine.getVerse(firstBookId, parseInt(firstChapterStr, 10), parseInt(firstVerseStr, 10));
-  const translation = firstVerse ? firstVerse.translation : '';
+  const translation = window.BibleEngine && BibleEngine.hasESVApiKey()
+    ? 'ESV'
+    : (window.BibleEngine ? BibleEngine.getActiveTranslation() : '');
   const body = getSelectionText();
 
   // Track these verses so we can mark them "added to a note" once the note
@@ -2611,9 +2646,9 @@ function createNoteFromVerseSelection() {
   clearWordSelection();
   openNoteEditor();
   setTimeout(() => {
-    const ta = document.getElementById('note-content-input');
-    const block = `\n[${refLabel}${translation ? ` — ${translation}` : ''}]\n${body.trim()}\n`;
-    ta.value += block;
+    const editable = document.getElementById('note-content-input');
+    const label = `${refLabel}${translation ? ` — ${translation}` : ''}`;
+    editable.insertAdjacentHTML('beforeend', `<p><b>${escHtml(label)}</b><br>${escHtml(body.trim())}</p>`);
     markNoteEditorDirty();
   }, 100);
 }
@@ -2625,93 +2660,34 @@ let noteEditorDirty = false;
 
 /* ═══════════════════════════════════════════════════════════════
    NOTE FORMATTING TOOLBAR
-   The note body is stored as plain text with lightweight markdown-style
-   markers (**bold**, *italic*, ++underline++, {{c:#hex}}colored{{/c}},
-   "- " bullets, "#/##/###" headings, standalone "---" divider). The
-   toolbar buttons insert these markers around the current selection;
-   renderNoteContentHtml() converts them to real HTML for the read-only
-   viewer and note-card previews.
+   The note body is a contenteditable div — formatting is applied live via
+   document.execCommand, so Bold/Italic/H1/etc. show their real styled
+   result immediately while editing, not raw markup. The saved note.content
+   is the resulting HTML. Legacy notes saved before this rewrite (plain
+   text with lightweight ** / *  / ++ / {{c:}} markers) are still readable —
+   see renderNoteContentHtml()'s fallback path.
 ════════════════════════════════════════════════════════════════ */
 
-function noteTextarea() {
+function noteEditableEl() {
   return document.getElementById('note-content-input');
 }
 
-/** Wrap the current selection (or insert a placeholder) with before/after markers. */
-function wrapNoteSelection(before, after) {
-  const ta = noteTextarea();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const value = ta.value;
-  const selected = value.slice(start, end) || 'text';
-  const newValue = value.slice(0, start) + before + selected + after + value.slice(end);
-  ta.value = newValue;
-  ta.focus();
-  ta.setSelectionRange(start + before.length, start + before.length + selected.length);
+/** Run a document.execCommand against the note editor, keeping focus/selection intact. */
+function execNoteCommand(cmd, value = null) {
+  noteEditableEl().focus();
+  document.execCommand(cmd, false, value);
   markNoteEditorDirty();
 }
 
-/** Insert a "---" divider block on its own line at the cursor position. */
+/** Insert a horizontal-rule divider at the current cursor position. */
 function insertNoteDivider() {
-  const ta = noteTextarea();
-  const start = ta.selectionStart;
-  const value = ta.value;
-  const needsLeadingBreak = start > 0 && value[start - 1] !== '\n';
-  const insert = `${needsLeadingBreak ? '\n' : ''}\n---\n\n`;
-  ta.value = value.slice(0, start) + insert + value.slice(start);
-  const caret = start + insert.length;
-  ta.focus();
-  ta.setSelectionRange(caret, caret);
-  markNoteEditorDirty();
+  execNoteCommand('insertHTML', '<hr>');
 }
 
-/** Get the [lineStart, lineEnd) character range covering every line touched by the selection. */
-function _noteSelectedLineRange(ta) {
-  const value = ta.value;
-  let start = value.lastIndexOf('\n', ta.selectionStart - 1) + 1;
-  let end = ta.selectionEnd === ta.selectionStart
-    ? (value.indexOf('\n', ta.selectionStart) === -1 ? value.length : value.indexOf('\n', ta.selectionStart))
-    : (value.indexOf('\n', ta.selectionEnd - 1) === -1 ? value.length : value.indexOf('\n', ta.selectionEnd - 1));
-  return [start, end];
-}
-
-/** Toggle "- " bullet prefix on every line covered by the current selection. */
-function toggleNoteBulletList() {
-  const ta = noteTextarea();
-  const [start, end] = _noteSelectedLineRange(ta);
-  const value = ta.value;
-  const block = value.slice(start, end);
-  const lines = block.split('\n');
-  const allBulleted = lines.every(l => l.trim() === '' || l.startsWith('- '));
-  const newLines = lines.map(l => {
-    if (l.trim() === '') return l;
-    return allBulleted ? l.replace(/^- /, '') : (l.startsWith('- ') ? l : '- ' + l);
-  });
-  const newBlock = newLines.join('\n');
-  ta.value = value.slice(0, start) + newBlock + value.slice(end);
-  ta.focus();
-  ta.setSelectionRange(start, start + newBlock.length);
-  markNoteEditorDirty();
-}
-
-/** Toggle a heading level (1-3) on the current line; level 0 clears back to a plain paragraph. */
+/** Toggle a heading level (1-3) on the current block; level 0 returns it to a plain paragraph. */
 function toggleNoteHeading(level) {
-  const ta = noteTextarea();
-  const [start, end] = _noteSelectedLineRange(ta);
-  const value = ta.value;
-  const block = value.slice(start, end);
-  const lines = block.split('\n');
-  const targetPrefix = level > 0 ? '#'.repeat(level) + ' ' : '';
-  const newLines = lines.map(l => {
-    const stripped = l.replace(/^#{1,3} /, '');
-    if (level === 0) return stripped;
-    const alreadyThisLevel = l.startsWith(targetPrefix) && !l.startsWith(targetPrefix.trimEnd() + '#');
-    return alreadyThisLevel ? stripped : targetPrefix + stripped;
-  });
-  const newBlock = newLines.join('\n');
-  ta.value = value.slice(0, start) + newBlock + value.slice(end);
-  ta.focus();
-  ta.setSelectionRange(start, start + newBlock.length);
-  markNoteEditorDirty();
+  const tag = level > 0 ? `h${level}` : 'p';
+  execNoteCommand('formatBlock', `<${tag}>`);
 }
 
 function toggleNoteColorPopover() {
@@ -2719,19 +2695,13 @@ function toggleNoteColorPopover() {
   popover.classList.toggle('show');
 }
 
-/** Wrap the current selection with a color marker, or clear if hex is null. */
+/** Apply a text color to the current selection, or hex=null to reset it to the theme's default text color. */
 function applyNoteTextColor(hex) {
   document.getElementById('note-color-popover').classList.remove('show');
-  const ta = noteTextarea();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  if (start === end) { toast('Select some text first.'); return; }
-  const value = ta.value;
-  const selected = value.slice(start, end);
-  const wrapped = hex ? `{{c:${hex}}}${selected}{{/c}}` : selected.replace(/\{\{c:#[0-9a-fA-F]{3,6}\}\}|\{\{\/c\}\}/g, '');
-  ta.value = value.slice(0, start) + wrapped + value.slice(end);
-  ta.focus();
-  ta.setSelectionRange(start, start + wrapped.length);
-  markNoteEditorDirty();
+  const editable = noteEditableEl();
+  if (window.getSelection().toString() === '') { toast('Select some text first.'); return; }
+  const color = hex || getComputedStyle(editable).color;
+  execNoteCommand('foreColor', color);
 }
 
 // Close the color popover when tapping elsewhere in the toolbar/editor.
@@ -2765,11 +2735,13 @@ function openNoteEditor(noteId = null) {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
     document.getElementById('note-title-input').value = note.title || '';
-    document.getElementById('note-content-input').value = note.content || '';
+    document.getElementById('note-content-input').innerHTML = _looksLikeHtml(note.content || '')
+      ? (note.content || '')
+      : applyNoteInlineFormatting(applyNoteBlockFormatting(escHtml(note.content || ''))).replace(/\n/g, '<br>');
     currentTags = [...(note.tags || [])];
   } else {
     document.getElementById('note-title-input').value = '';
-    document.getElementById('note-content-input').value = '';
+    document.getElementById('note-content-input').innerHTML = '';
     currentTags = [];
   }
 
@@ -2802,7 +2774,7 @@ function upsertLocalNote(note) {
 
 async function saveNote() {
   const title = document.getElementById('note-title-input').value.trim();
-  const content = document.getElementById('note-content-input').value.trim();
+  const content = document.getElementById('note-content-input').innerHTML.trim();
   if (!title) { toast('Please enter a title.'); document.getElementById('note-title-input').focus(); return; }
 
   // Commit any tag text still sitting in the input box (typed but never
@@ -2941,8 +2913,8 @@ function renderNoteViewPage(data) {
   ).join('');
 
   const contentEl = document.getElementById('detail-content');
-  if (data.content && data.content.trim()) {
-    contentEl.innerHTML = linkifyVerseRefs(data.content);
+  if (data.content && notePreviewText(data.content).trim()) {
+    contentEl.innerHTML = renderNoteContentHtml(data.content);
     contentEl.classList.remove('empty');
   } else {
     contentEl.textContent = 'No content.';
@@ -2983,7 +2955,7 @@ function openNoteDetail(id) {
 function viewFromEditor() {
   const draft = {
     title: document.getElementById('note-title-input').value.trim(),
-    content: document.getElementById('note-content-input').value.trim(),
+    content: document.getElementById('note-content-input').innerHTML.trim(),
     tags: currentTags,
     createdAt: (editingNoteId && notes.find(n => n.id === editingNoteId)?.createdAt) || new Date().toISOString()
   };
@@ -3073,7 +3045,7 @@ function renderNotes(subset = null) {
 }
 
 function buildNoteCard(n) {
-  const preview = stripNoteFormattingMarkers((n.content || '').trim()).slice(0, 160).replace(/\n/g, ' ');
+  const preview = notePreviewText(n.content).slice(0, 160).replace(/\n/g, ' ');
   const previewHtml = preview
     ? escHtml(preview)
     : '<span class="card-content-empty">No additional text…</span>';
