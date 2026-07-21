@@ -499,8 +499,11 @@
       box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
     }
     #verse-selection-bar.show { display: flex; }
-    #verse-selection-bar .vsel-ref { font-weight: 700; color: var(--text-primary); font-size: 0.9rem; }
-    #verse-selection-bar .vsel-actions { display: flex; gap: 0.6rem; }
+    #verse-selection-bar .vsel-ref {
+      font-weight: 700; color: var(--text-primary); font-size: 0.9rem;
+      flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #verse-selection-bar .vsel-actions { display: flex; gap: 0.6rem; flex-shrink: 0; }
 
     /* ── Recycle Bin ── */
     .recycle-card { border-color: rgba(239,68,68,0.3); }
@@ -576,6 +579,8 @@
     }
     .vsel-icon-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
     .vsel-icon-btn.active { color: var(--accent); }
+    .vsel-icon-btn-primary { background: var(--accent); color: #fff; flex-shrink: 0; }
+    .vsel-icon-btn-primary:hover { background: var(--accent-dark); color: #fff; }
 
     /* ── Chip input (tags) ── */
     .chip-wrap {
@@ -719,8 +724,12 @@
     .note-page-content-display hr, .note-content-editable hr {
       border: none; border-top: 1px solid var(--border); margin: 1rem 0;
     }
-    .note-page-content-display ul, .note-content-editable ul { margin: 0.3rem 0; padding-left: 1.3rem; }
-    .note-page-content-display li, .note-content-editable li { margin: 0.15rem 0; }
+    .note-page-content-display ul, .note-content-editable ul {
+      margin: 0.3rem 0; padding-left: 1.3rem; list-style: disc outside;
+    }
+    .note-page-content-display li, .note-content-editable li {
+      margin: 0.15rem 0; display: list-item;
+    }
     .note-page-content-display {
       font-size: 0.95rem; line-height: 1.8; color: var(--text-primary); white-space: pre-wrap;
     }
@@ -1134,7 +1143,13 @@
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
-          <button class="btn btn-primary" style="font-size:0.82rem;padding:0.4rem 0.9rem;" onclick="createNoteFromVerseSelection()">Create Note</button>
+          <button class="vsel-icon-btn vsel-icon-btn-primary" onclick="createNoteFromVerseSelection()" title="Create Note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div id="bible-chapter-nav-bar">
@@ -1530,8 +1545,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1543,7 +1558,7 @@ const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
    app only fetches on demand and never caches more than one chapter
    at a time (see esv_version.js).
 ════════════════════════════════════════════════════════════════ */
-const ESV_API_KEY = 'f970b01e30fffa25ba30f3021ac6f0fcccc7f44c';
+const ESV_API_KEY = 'PASTE_YOUR_ESV_API_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════════════════
    APP STATE
@@ -2121,7 +2136,13 @@ function buildVerseRefIndex() {
 /** Turn escaped, line-based markers (headings, "---" divider, "- " bullets) into HTML blocks. */
 /** Detect whether stored note content is already real HTML (new editor) vs legacy plain text. */
 function _looksLikeHtml(str) {
-  return /^\s*<[a-z][\s\S]*>/i.test(str || '');
+  // Checks for tags our own rich-text editor actually produces, anywhere in
+  // the string — not just at the very start. A note almost always begins
+  // with plain typed text and only picks up a <div>/<br> once you hit
+  // Enter for a second line, so anchoring this to the start of the string
+  // misclassified nearly every real note as "legacy plain text" and then
+  // HTML-escaped it, which is why raw <br>/<div> text was showing up.
+  return /<(p|div|br|b|i|u|ul|ol|li|h1|h2|h3|hr|span)\b[^>]*>/i.test(str || '');
 }
 
 /** Legacy-only: turn "#/##/###" headings, "---" divider, and "- " bullets into HTML blocks. */
