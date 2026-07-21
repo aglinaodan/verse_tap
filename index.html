@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="esv_version.js"></script>
+  <script src="strongs_data.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -446,6 +447,15 @@
       background: none; border: none; color: var(--text-muted); cursor: pointer;
     }
     .bible-search-btn:hover { color: var(--text-primary); }
+    #strongs-toggle-btn.active { color: var(--accent); }
+    /* Words with known Strong's data get a blue dotted underline, but only
+       while "Find Meaning" mode is on (body.strongs-mode). Tagging itself
+       (data-strongs attribute) always happens on render; visibility is
+       purely a CSS toggle so switching modes needs no re-render. */
+    body.strongs-mode .word-strongs-eligible,
+    body.strongs-mode .note-strongs-word {
+      border-bottom: 2px dotted #60a5fa; cursor: pointer;
+    }
     .bible-version-picker {
       position: relative; display: inline-flex; align-items: center; gap: 0.2rem;
       background: var(--bg-base); border: 1px solid var(--border);
@@ -663,11 +673,14 @@
       content: attr(data-placeholder); color: var(--text-muted); opacity: 0.65; pointer-events: none;
     }
 
-    /* ── Note formatting toolbar (sits as its own bar just above Cancel/Save) ── */
+    /* ── Note formatting toolbar (floats above the on-screen keyboard) ── */
+    #note-editor-page .note-page-body { padding-bottom: 4.5rem; }
     .note-toolbar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 260;
+      background: var(--bg-nav);
       display: flex; align-items: center; gap: 0.3rem; overflow-x: auto;
-      padding: 0.5rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0;
-      -ms-overflow-style: none; scrollbar-width: none; position: relative;
+      padding: 0.5rem 1.25rem; border-top: 1px solid var(--border);
+      -ms-overflow-style: none; scrollbar-width: none; transition: bottom 0.05s linear;
     }
     .note-toolbar::-webkit-scrollbar { display: none; }
     .note-toolbar-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; margin: 0 0.15rem; }
@@ -712,17 +725,6 @@
       font-size: 0.95rem; line-height: 1.8; color: var(--text-primary); white-space: pre-wrap;
     }
     .note-page-content-display.empty { color: var(--text-muted); font-style: italic; }
-    .note-page-footer {
-      display: flex; justify-content: flex-end; gap: 0.6rem;
-      padding: 0.9rem 1.25rem; border-top: 1px solid var(--border); flex-shrink: 0;
-    }
-    .note-footer-icon-btn {
-      width: 44px; height: 44px; padding: 0; display: inline-flex;
-      align-items: center; justify-content: center; border-radius: 50%;
-    }
-    .note-footer-icon-btn.is-saving { opacity: 0.55; }
-    .note-footer-icon-btn.is-saving svg { animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Focus/reading mode on the note viewer: hide chrome, float an exit button */
     .note-page.focus-mode .note-page-header { display: none; }
@@ -1042,6 +1044,9 @@
       <button class="bible-search-btn" id="bible-search-btn" onclick="openBibleSearchModal()" title="Search" style="display:none;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       </button>
+      <button class="bible-search-btn" id="strongs-toggle-btn" onclick="toggleStrongsMode()" title="Find Meaning — tap underlined words for the original Hebrew/Greek" style="display:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </button>
       <div class="bible-version-picker" id="bible-version-picker" style="display:none;">
         <span id="bible-version-label">KJV</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>
@@ -1213,7 +1218,7 @@
       background:rgba(234,179,8,0.15);padding:0.2rem 0.55rem;border-radius:var(--radius);white-space:nowrap;">
       ● Not saved yet
     </span>
-    <button class="note-page-pill-btn" onclick="viewFromEditor()">
+    <button class="note-page-pill-btn ghost" onclick="viewFromEditor()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
       </svg>
@@ -1221,14 +1226,15 @@
     </button>
   </div>
   <div class="note-page-body">
-    <input class="note-page-title-input" id="note-title-input" type="text" placeholder="Sermon Title" maxlength="120" oninput="markNoteEditorDirty()" />
+    <input class="note-page-title-input" id="note-title-input" type="text" placeholder="Sermon Title" maxlength="120" oninput="markNoteEditorDirty()" onfocus="setTimeout(updateNoteToolbarPosition,300)" onblur="setTimeout(updateNoteToolbarPosition,300)" />
     <div class="chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-input').focus()">
       <span class="tag-plus-icon">+</span>
       <input id="tag-input" placeholder="Add tag…" onkeydown="handleTagKeydown(event)" />
     </div>
     <div class="note-page-divider" style="margin:1.1rem 0;"></div>
     <div class="note-page-content-textarea note-content-editable" id="note-content-input" contenteditable="true"
-         data-placeholder="Your sermon notes, reflections, Scripture references…" oninput="markNoteEditorDirty()"></div>
+         data-placeholder="Your sermon notes, reflections, Scripture references…" oninput="markNoteEditorDirty()"
+         onfocus="setTimeout(updateNoteToolbarPosition,300)" onblur="setTimeout(updateNoteToolbarPosition,300)"></div>
   </div>
   <div class="note-toolbar" id="note-toolbar">
     <button type="button" class="note-toolbar-btn" onmousedown="event.preventDefault()" onclick="execNoteCommand('bold')" title="Bold" aria-label="Bold">
@@ -1265,19 +1271,6 @@
     <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(2)" title="Heading 2" aria-label="Heading 2">H2</button>
     <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(3)" title="Heading 3" aria-label="Heading 3">H3</button>
     <button type="button" class="note-toolbar-btn note-toolbar-btn-text" onmousedown="event.preventDefault()" onclick="toggleNoteHeading(0)" title="Paragraph" aria-label="Paragraph">¶</button>
-  </div>
-  <div class="note-page-footer">
-    <button class="btn btn-ghost note-footer-icon-btn" onclick="closeNoteEditor()" aria-label="Cancel" title="Cancel">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-      </svg>
-    </button>
-    <button class="btn btn-primary note-footer-icon-btn" onclick="saveNote()" aria-label="Save Note" title="Save Note">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-        <polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/>
-      </svg>
-    </button>
   </div>
 </div>
 
@@ -1346,6 +1339,41 @@
     <div class="modal-body">
       <div id="verse-ref-modal-text" style="font-size:0.95rem;line-height:1.75;color:var(--text-primary);"></div>
       <div id="verse-ref-modal-attribution"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STRONG'S WORD MEANING MODAL ("Find Meaning" mode)
+════════════════════════════════════════════════════════════════ -->
+<div id="strongs-modal" class="modal-backdrop" onclick="closeStrongsModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-height:75vh;">
+    <div class="modal-header">
+      <span style="display:flex;align-items:center;gap:0.55rem;">
+        <span id="strongs-modal-word" style="font-weight:700;font-size:0.95rem;letter-spacing:0.03em;color:var(--text-primary);text-transform:uppercase;"></span>
+        <span id="strongs-modal-code" style="font-size:0.72rem;font-weight:700;color:var(--accent);background:rgba(99,102,241,0.15);padding:0.15rem 0.5rem;border-radius:var(--radius);"></span>
+      </span>
+      <button class="icon-btn" onclick="closeStrongsModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:baseline;gap:0.6rem;margin-bottom:0.2rem;">
+        <span id="strongs-modal-original" style="font-size:1.5rem;color:var(--text-primary);" dir="rtl"></span>
+        <span id="strongs-modal-translit" style="font-style:italic;color:var(--text-muted);font-size:0.95rem;"></span>
+      </div>
+      <div id="strongs-modal-pronunciation" style="font-style:italic;color:var(--text-muted);font-size:0.85rem;margin-bottom:0.9rem;"></div>
+      <div class="note-page-divider" style="margin-bottom:0.9rem;"></div>
+      <div id="strongs-modal-definition" style="font-size:0.9rem;line-height:1.65;color:var(--text-primary);margin-bottom:0.9rem;"></div>
+      <div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;">
+        <strong style="color:var(--text-primary);">KJV also translates as:</strong>
+        <span id="strongs-modal-kjv"></span>
+      </div>
+      <div style="font-size:0.68rem;color:var(--text-muted);opacity:0.7;margin-top:1rem;">
+        ⚠ Treat as a starting point — context matters as much as root meaning. Source: Strong's Exhaustive Concordance (1890, public domain).
+      </div>
     </div>
   </div>
 </div>
@@ -1502,8 +1530,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1515,7 +1543,7 @@ const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
    app only fetches on demand and never caches more than one chapter
    at a time (see esv_version.js).
 ════════════════════════════════════════════════════════════════ */
-const ESV_API_KEY = 'f970b01e30fffa25ba30f3021ac6f0fcccc7f44c';
+const ESV_API_KEY = 'PASTE_YOUR_ESV_API_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════════════════
    APP STATE
@@ -1841,6 +1869,7 @@ function showView(name) {
   document.getElementById('bible-title-picker').style.display = isBible ? 'flex' : 'none';
   document.getElementById('bible-search-btn').style.display = isBible ? 'flex' : 'none';
   document.getElementById('bible-version-picker').style.display = isBible ? 'inline-flex' : 'none';
+  document.getElementById('strongs-toggle-btn').style.display = isBible ? 'flex' : 'none';
   document.getElementById('nav-translation').style.display = isBible ? 'none' : 'inline';
 
   if (name === 'bible') {
@@ -2152,7 +2181,43 @@ function renderNoteContentHtml(content) {
   let html = _looksLikeHtml(raw)
     ? raw
     : applyNoteInlineFormatting(applyNoteBlockFormatting(escHtml(raw)));
+  html = tagStrongsInNoteHtml(html);
   return linkifyVerseRefs(html);
+}
+
+/**
+ * Best-effort "Find Meaning" tagging inside notes: only applies within the
+ * quoted-verse blocks that "Create Note from Verse Selection" inserts
+ * (a <p><b>Book Chapter:Verse</b><br>quoted text</p> block carrying its own
+ * reference) — there's no reliable verse context for freely-typed prose, so
+ * that's left untouched. Silently no-ops if the block doesn't match, if the
+ * book isn't recognized, or if there's no Strong's data for those verses.
+ */
+function tagStrongsInNoteHtml(html) {
+  if (!window.StrongsData || !window.BibleEngine) return html;
+  return html.replace(/(<p><b>)([^<]+?)(<\/b><br>)([\s\S]*?)(<\/p>)/g, (full, open, label, mid, body, close) => {
+    const m = label.match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?/);
+    if (!m) return full;
+    const book = BibleEngine.findBook(m[1].trim());
+    if (!book || !m[3]) return full;
+    const chapter = parseInt(m[2], 10);
+    const vStart = parseInt(m[3], 10);
+    const vEnd = m[4] ? parseInt(m[4], 10) : vStart;
+
+    let queue = [];
+    for (let v = vStart; v <= vEnd; v++) {
+      const entries = StrongsData.ALIGNMENT[`${book.id}:${chapter}:${v}`];
+      if (entries) queue = queue.concat(entries);
+    }
+    if (!queue.length) return full;
+
+    const taggedBody = body.replace(/[A-Za-z']+/g, word => {
+      if (!queue.length || word.toLowerCase() !== queue[0].word.toLowerCase()) return word;
+      const strongs = queue.shift().strongs;
+      return `<span class="note-strongs-word" data-strongs="${strongs}" onclick="openStrongsModal('${strongs}', this.textContent)">${word}</span>`;
+    });
+    return open + label + mid + taggedBody + close;
+  });
 }
 
 /** Wrap plain-text Scripture references (e.g. "John 3:16") in clickable spans within an HTML string. */
@@ -2247,6 +2312,36 @@ function closeVerseRefModal() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   "FIND MEANING" MODE (Strong's word lookup)
+   Word tagging happens unconditionally at render time (see
+   renderVerseWords); this toggle only controls whether the underline is
+   visible and whether taps open the meaning modal, via a single body class.
+════════════════════════════════════════════════════════════════ */
+function toggleStrongsMode() {
+  const on = document.body.classList.toggle('strongs-mode');
+  document.getElementById('strongs-toggle-btn').classList.toggle('active', on);
+  toast(on ? 'Find Meaning on — tap an underlined word.' : 'Find Meaning off.');
+}
+
+function openStrongsModal(code, displayedWord) {
+  if (!window.StrongsData) return;
+  const entry = StrongsData.DICTIONARY[code];
+  if (!entry) return;
+  document.getElementById('strongs-modal-word').textContent = (displayedWord || '').trim();
+  document.getElementById('strongs-modal-code').textContent = code;
+  document.getElementById('strongs-modal-original').textContent = entry.word;
+  document.getElementById('strongs-modal-translit').textContent = `(${entry.translit})`;
+  document.getElementById('strongs-modal-pronunciation').textContent = entry.pronunciation;
+  document.getElementById('strongs-modal-definition').textContent = entry.definition;
+  document.getElementById('strongs-modal-kjv').textContent = ' ' + entry.kjvUsage;
+  document.getElementById('strongs-modal').classList.add('show');
+}
+
+function closeStrongsModal() {
+  document.getElementById('strongs-modal').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════
    CLOUD SYNC (one-time, PIN-gated migration to Firestore)
 ════════════════════════════════════════════════════════════════ */
 function updateSyncButtonState() {
@@ -2325,6 +2420,11 @@ async function runCloudSync() {
 
 function renderVerseWords(text, key, globalStart) {
   const wordColors = highlightedWords.get(key);
+  // Words with known Strong's data for this verse, matched in reading order
+  // (handles repeated words like "the" correctly since we consume the queue
+  // left to right rather than matching by text alone).
+  const strongsQueue = (window.StrongsData && StrongsData.ALIGNMENT[key])
+    ? [...StrongsData.ALIGNMENT[key]] : null;
   // Tokenize into words + the whitespace between them, so we can preserve
   // original spacing exactly (and, for the in-progress selection preview,
   // fill the gaps so it reads as one continuous block).
@@ -2341,6 +2441,13 @@ function renderVerseWords(text, key, globalStart) {
     t.color = wordColors ? wordColors.get(t.localIdx) : undefined;
     t.selecting = wordSelectionActive &&
       t.globalIdx >= wordSelectionStartGlobal && t.globalIdx <= wordSelectionEndGlobal;
+    if (strongsQueue && strongsQueue.length) {
+      const stripped = t.text.replace(/[^\p{L}\p{N}']/gu, '').toLowerCase();
+      if (stripped === strongsQueue[0].word.toLowerCase()) {
+        t.strongs = strongsQueue[0].strongs;
+        strongsQueue.shift();
+      }
+    }
     chapterWordIndex[t.globalIdx] = { verseKey: key, localIdx: t.localIdx };
     localIdx++;
   });
@@ -2352,7 +2459,9 @@ function renderVerseWords(text, key, globalStart) {
       const cls = ['word'];
       if (t.color) cls.push('hl-word-' + t.color);
       if (t.selecting) cls.push('word-selecting');
-      html += `<span class="${cls.join(' ')}" data-global-idx="${t.globalIdx}">${escHtml(t.text)}</span>`;
+      if (t.strongs) cls.push('word-strongs-eligible');
+      const strongsAttr = t.strongs ? ` data-strongs="${t.strongs}"` : '';
+      html += `<span class="${cls.join(' ')}" data-global-idx="${t.globalIdx}"${strongsAttr}>${escHtml(t.text)}</span>`;
     } else {
       // Whitespace between two words: a font-color highlight already carries
       // through plain text with nothing to break, so only the active
@@ -2457,6 +2566,13 @@ function setupBibleVerseInteractions() {
   container.dataset.interactionsBound = '1';
 
   container.addEventListener('click', e => {
+    if (document.body.classList.contains('strongs-mode')) {
+      const strongsEl = e.target.closest('[data-strongs]');
+      if (strongsEl) {
+        openStrongsModal(strongsEl.dataset.strongs, strongsEl.textContent);
+        return;
+      }
+    }
     const wordEl = e.target.closest('.word');
     if (wordEl) {
       handleWordTap(parseInt(wordEl.dataset.globalIdx, 10));
@@ -2726,6 +2842,24 @@ function clearNoteEditorDirty() {
   if (badge) badge.style.display = 'none';
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Keep the formatting toolbar pinned just above the on-screen keyboard.
+   Mobile browsers shrink window.visualViewport (not window.innerHeight) when
+   the keyboard opens, so a plain `position: fixed; bottom: 0` bar ends up
+   hidden behind the keyboard unless we track that shift ourselves.
+───────────────────────────────────────────────────────────────────────── */
+function updateNoteToolbarPosition() {
+  const toolbar = document.getElementById('note-toolbar');
+  if (!toolbar) return;
+  const vv = window.visualViewport;
+  const keyboardInset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  toolbar.style.bottom = `${keyboardInset}px`;
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateNoteToolbarPosition);
+  window.visualViewport.addEventListener('scroll', updateNoteToolbarPosition);
+}
+
 function openNoteEditor(noteId = null) {
   editingNoteId = noteId;
   currentTags = [];
@@ -2748,10 +2882,11 @@ function openNoteEditor(noteId = null) {
   renderTagChips();
   document.getElementById('note-view-page').classList.remove('open');
   document.getElementById('note-editor-page').classList.add('open');
+  updateNoteToolbarPosition();
   setTimeout(() => document.getElementById('note-title-input').focus(), 80);
 }
 
-function closeNoteEditor() {
+function _resetNoteEditorUI() {
   document.getElementById('note-editor-page').classList.remove('open');
   editingNoteId = null;
   currentTags = [];
@@ -2772,60 +2907,113 @@ function upsertLocalNote(note) {
   else notes.unshift(note);
 }
 
-async function saveNote() {
-  const title = document.getElementById('note-title-input').value.trim();
-  const content = document.getElementById('note-content-input').innerHTML.trim();
-  if (!title) { toast('Please enter a title.'); document.getElementById('note-title-input').focus(); return; }
+/** First line of the note body, used as a fallback title when the title field is left blank. */
+function deriveAutoTitle(plainText) {
+  if (!plainText) return 'Untitled Note';
+  const firstLine = plainText.split('\n')[0].trim();
+  return (firstLine || 'Untitled Note').slice(0, 60);
+}
+
+/**
+ * Auto-save-on-close. There's no Cancel/Save button anymore: closing the
+ * editor (back arrow, backgrounding the app, or the app closing outright)
+ * saves automatically if anything was typed, and quietly discards a
+ * brand-new, completely untouched note instead of littering an empty entry.
+ *
+ * closeAfter=true  → the normal "back out of the editor" path: tear the UI
+ *                     down immediately (snappy), then persist in the background.
+ * closeAfter=false → a "the app might be about to die" checkpoint (used from
+ *                     the visibilitychange/pagehide listeners below): persist
+ *                     without closing, so the draft survives even if you're
+ *                     just glancing at another app rather than truly leaving.
+ */
+async function persistNoteDraft({ closeAfter }) {
+  const titleEl = document.getElementById('note-title-input');
+  const contentEl = document.getElementById('note-content-input');
+  if (!titleEl || !contentEl) return;
+
+  const title = titleEl.value.trim();
+  const content = contentEl.innerHTML.trim();
+  const plainText = (contentEl.textContent || '').trim();
+  const hasContent = title !== '' || plainText !== '';
 
   // Commit any tag text still sitting in the input box (typed but never
-  // confirmed with Enter/comma) so it isn't silently dropped on save.
+  // confirmed with Enter/comma) so it isn't silently dropped.
   const tagInput = document.getElementById('tag-input');
   if (tagInput) {
     const pending = tagInput.value.trim().replace(/,$/, '');
-    if (pending && !currentTags.includes(pending)) {
-      currentTags.push(pending);
-    }
+    if (pending && !currentTags.includes(pending)) currentTags.push(pending);
     tagInput.value = '';
   }
 
-  const saveBtn = document.querySelector('#note-editor-page .btn-primary');
-  saveBtn.disabled = true; saveBtn.classList.add('is-saving');
+  if (!hasContent) {
+    // Nothing was typed at all — nothing to save. Just tear down the UI
+    // rather than create an empty note.
+    if (closeAfter) _resetNoteEditorUI();
+    return;
+  }
+
+  const finalTitle = title || deriveAutoTitle(plainText);
+  const tags = [...currentTags];
+  const versesToMark = [...pendingNoteVerseKeys];
+  const targetId = editingNoteId;
+
+  if (closeAfter) {
+    _resetNoteEditorUI();
+    renderNotes();
+  }
 
   try {
-    if (editingNoteId) {
+    if (targetId) {
       const updatedAt = new Date().toISOString();
-      await dbUpdate(editingNoteId, { title, content, tags: currentTags, updatedAt });
-      const existing = notes.find(n => n.id === editingNoteId);
-      upsertLocalNote({ ...existing, id: editingNoteId, title, content, tags: currentTags, updatedAt });
-      toast('Note updated!');
+      await dbUpdate(targetId, { title: finalTitle, content, tags, updatedAt });
+      const existing = notes.find(n => n.id === targetId);
+      upsertLocalNote({ ...existing, id: targetId, title: finalTitle, content, tags, updatedAt });
     } else {
       const now = new Date().toISOString();
       const newNote = {
-        title, content, tags: currentTags,
+        title: finalTitle, content, tags,
         createdAt: now, updatedAt: now,
         isDeleted: false, deletedAt: null
       };
       const saved = await dbAdd(newNote);
       upsertLocalNote(saved);
-      if (pendingNoteVerseKeys.length) {
-        pendingNoteVerseKeys.forEach(key => {
-          versesInNotes.set(key, (versesInNotes.get(key) || 0) + 1);
-        });
-        pendingNoteVerseKeys = [];
+      // If we're NOT closing (a background-save checkpoint), remember the new
+      // id so the next checkpoint or eventual close updates this same note
+      // instead of creating a duplicate.
+      if (!closeAfter) editingNoteId = saved.id;
+      if (versesToMark.length) {
+        versesToMark.forEach(key => versesInNotes.set(key, (versesInNotes.get(key) || 0) + 1));
+        if (closeAfter) pendingNoteVerseKeys = [];
       }
-      toast('Note saved!');
     }
-    closeNoteEditor();
+    if (!closeAfter) clearNoteEditorDirty();
     renderNotes();
     // In cloud mode the Firestore onSnapshot listener will also re-render shortly
     // after with the authoritative server state — harmless, just a redundant
     // confirmation pass, and it means the UI is never left waiting on it.
   } catch (e) {
     toast('Error saving: ' + e.message);
-  } finally {
-    saveBtn.disabled = false; saveBtn.classList.remove('is-saving');
   }
 }
+
+function closeNoteEditor() {
+  if (!document.getElementById('note-editor-page').classList.contains('open')) return;
+  persistNoteDraft({ closeAfter: true });
+}
+
+// Checkpoint an open draft if the app is backgrounded or actually closed,
+// so nothing typed is lost even if the OS kills the page outright.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && document.getElementById('note-editor-page')?.classList.contains('open')) {
+    persistNoteDraft({ closeAfter: false });
+  }
+});
+window.addEventListener('pagehide', () => {
+  if (document.getElementById('note-editor-page')?.classList.contains('open')) {
+    persistNoteDraft({ closeAfter: false });
+  }
+});
 
 async function softDeleteNote(id, silent = false) {
   const deletedAt = new Date().toISOString();

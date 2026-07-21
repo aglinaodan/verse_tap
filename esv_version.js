@@ -365,8 +365,63 @@
     endpoint: 'https://api.esv.org/v3/passage/text/'
   };
 
-  // Holds AT MOST one chapter's worth of fetched verses at a time.
-  let _liveCache = { key: null, verses: null };
+  /* ── Persistent chapter cache (localStorage) ──────────────────────────────
+     Crossway's API terms cap locally-stored ESV text at 500 verses (or half
+     a book, whichever is greater) — this is NOT "cache everything forever".
+     We stay safely under that with a hard 450-verse budget and evict the
+     least-recently-read chapter first (LRU) once it's exceeded. This still
+     gives instant reloads for whatever you've been reading recently, without
+     drifting into "storing an offline copy of the Bible". */
+  const CHAPTER_CACHE_KEY = 'sn_esv_chapter_cache_v1';
+  const CHAPTER_CACHE_VERSE_BUDGET = 450;
+
+  function _loadChapterCache() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(CHAPTER_CACHE_KEY) || 'null');
+      if (raw && raw.entries && Array.isArray(raw.order)) return raw;
+    } catch (e) { /* fall through to a fresh cache */ }
+    return { entries: {}, order: [] };
+  }
+
+  function _saveChapterCache(cache) {
+    try {
+      localStorage.setItem(CHAPTER_CACHE_KEY, JSON.stringify(cache));
+    } catch (e) {
+      console.warn('[BibleEngine] Failed to persist ESV chapter cache:', e.message);
+    }
+  }
+
+  function _chapterCacheGet(cacheKey) {
+    const cache = _loadChapterCache();
+    const entry = cache.entries[cacheKey];
+    if (!entry) return null;
+    // Touch it as most-recently-used.
+    cache.order = cache.order.filter(k => k !== cacheKey);
+    cache.order.push(cacheKey);
+    _saveChapterCache(cache);
+    return entry.verses;
+  }
+
+  function _chapterCacheSet(cacheKey, verses, verseCount) {
+    const cache = _loadChapterCache();
+    cache.entries[cacheKey] = { verses, verseCount };
+    cache.order = cache.order.filter(k => k !== cacheKey);
+    cache.order.push(cacheKey);
+
+    // Evict least-recently-used chapters until we're back under budget.
+    let total = cache.order.reduce((sum, k) => sum + (cache.entries[k]?.verseCount || 0), 0);
+    while (total > CHAPTER_CACHE_VERSE_BUDGET && cache.order.length > 1) {
+      const evictKey = cache.order.shift();
+      total -= cache.entries[evictKey]?.verseCount || 0;
+      delete cache.entries[evictKey];
+    }
+    _saveChapterCache(cache);
+  }
+
+  /** Clear the persistent ESV chapter cache (e.g. for a "Clear offline Bible cache" setting). */
+  function clearChapterCache() {
+    try { localStorage.removeItem(CHAPTER_CACHE_KEY); } catch (e) { /* ignore */ }
+  }
 
   function configureESVApi({ apiKey } = {}) {
     _esvApi.apiKey = apiKey || null;
@@ -395,8 +450,10 @@
   /**
    * Fetch a chapter live from the ESV API.
    * Returns a Promise<Array<{ verse, text }>>.
-   * Falls back to throwing if no API key is configured or the request fails —
-   * callers should catch and fall back to getChapter() for offline/local data.
+   * Checks the persistent chapter cache first; only hits the network on a
+   * cache miss. Falls back to throwing if no API key is configured or the
+   * request fails — callers should catch and fall back to getChapter() for
+   * offline/local data.
    */
   async function fetchChapterLive(bookId, chapter) {
     if (!_esvApi.apiKey) throw new Error('ESV API key not configured. Call configureESVApi({ apiKey }) first.');
@@ -404,9 +461,8 @@
     if (!book) throw new Error(`Book "${bookId}" not found.`);
 
     const cacheKey = `${book.id}:${chapter}`;
-    if (_liveCache.key === cacheKey && _liveCache.verses) {
-      return _toVerseArray(book.id, chapter, _liveCache.verses);
-    }
+    const cached = _chapterCacheGet(cacheKey);
+    if (cached) return _toVerseArray(book.id, chapter, cached);
 
     const q = encodeURIComponent(`${book.name} ${chapter}`);
     const url = `${_esvApi.endpoint}?q=${q}&include-headings=false&include-footnotes=false` +
@@ -421,8 +477,7 @@
     const passage = (data.passages && data.passages[0]) || '';
     const verses = _parseESVPassageText(passage);
 
-    // Replace cache wholesale — never accumulate more than one chapter.
-    _liveCache = { key: cacheKey, verses };
+    _chapterCacheSet(cacheKey, verses, getVerseCount(book.id, chapter));
 
     return _toVerseArray(book.id, chapter, verses);
   }
@@ -593,6 +648,7 @@
     configureESVApi,
     hasESVApiKey,
     fetchChapterLive,
+    clearChapterCache,
     ESV_COPYRIGHT,
     registerTranslation,
     registerVerseData,
