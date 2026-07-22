@@ -191,10 +191,18 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .book-link:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+    .chapter-grid-btn {
+      display: flex; align-items: center; justify-content: center;
+      aspect-ratio: 1; border-radius: var(--radius); background: rgba(255,255,255,0.04);
+      color: var(--text-primary); font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: all 0.12s; border: none;
+    }
+    .chapter-grid-btn:hover, .chapter-grid-btn:active { background: var(--accent); color: #fff; }
     .division-title {
-      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.06em; color: var(--text-muted); opacity: 0.75;
-      margin: 0.55rem 0 0.15rem; padding-left: 0.15rem;
+      font-size: 0.64rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--accent); opacity: 1;
+      margin: 0.7rem 0 0.3rem; padding-left: 0.4rem;
+      border-left: 2px solid var(--accent);
     }
     .division-title:first-child { margin-top: 0; }
 
@@ -950,7 +958,7 @@
 
       <!-- Accordion Body -->
       <div id="bible-accordion-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;padding:0.5rem 1rem 0.75rem;">
+        <div id="bible-book-list-view" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;padding:0.5rem 1rem 0.75rem;">
           <!-- OT Column -->
           <div>
             <div class="testament-title" style="padding-left:0.25rem;">Old Testament</div>
@@ -961,6 +969,16 @@
             <div class="testament-title" style="padding-left:0.25rem;">New Testament</div>
             <div id="nt-book-list"></div>
           </div>
+        </div>
+        <!-- Chapter Grid View (shown after tapping a book) -->
+        <div id="bible-chapter-grid-view" style="display:none; padding:0.5rem 1rem 0.9rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem;">
+            <button onclick="showBibleBookListInAccordion()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;padding:0.2rem;" title="Back to books">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+            </button>
+            <span id="bible-chapter-grid-title" style="font-weight:700; font-size:1rem; color:var(--text-primary);"></span>
+          </div>
+          <div id="bible-chapter-grid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.5rem;"></div>
         </div>
       </div>
     </div>
@@ -1545,8 +1563,8 @@ const FIREBASE_CONFIG = {
 // password for this account in the Firebase console (Authentication > Users),
 // then paste the NEW password below. Longer term, consider replacing this
 // shared-account scheme with per-device Firebase Anonymous Auth instead.
-const SYNC_SERVICE_EMAIL = 'danaglinao@gmail.com';
-const SYNC_SERVICE_PASSWORD = 'danaglinao07';
+const SYNC_SERVICE_EMAIL = 'buenavistaaglinaodanny@gmail.com';
+const SYNC_SERVICE_PASSWORD = 'PASTE_NEW_ROTATED_PASSWORD_HERE';
 const SYNC_PIN = '0597';
 const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
 
@@ -1558,7 +1576,7 @@ const CLOUD_FLAG_KEY = 'sn_cloud_enabled';
    app only fetches on demand and never caches more than one chapter
    at a time (see esv_version.js).
 ════════════════════════════════════════════════════════════════ */
-const ESV_API_KEY = 'f970b01e30fffa25ba30f3021ac6f0fcccc7f44c';
+const ESV_API_KEY = 'PASTE_YOUR_ESV_API_KEY_HERE';
 
 /* ═══════════════════════════════════════════════════════════════
    APP STATE
@@ -1915,6 +1933,8 @@ function toggleBibleAccordion() {
   const body = document.getElementById('bible-accordion-body');
   toggle.classList.toggle('expanded');
   body.classList.toggle('open');
+  // Always land back on the book list when the accordion is reopened.
+  if (body.classList.contains('open')) showBibleBookListInAccordion();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1936,11 +1956,35 @@ function buildBibleNav() {
   document.getElementById('nt-book-list').innerHTML = renderDivisionBookList('NT');
 }
 
+/** Tapping a book now shows its chapter grid first, rather than jumping straight to chapter 1. */
 function openBibleBook(bookId) {
+  const book = BibleEngine.findBook(bookId);
+  if (!book) return;
+  const chapterCount = BibleEngine.getChapterCount(bookId);
+
+  document.getElementById('bible-chapter-grid-title').textContent = book.name;
+  document.getElementById('bible-chapter-grid').innerHTML = Array.from({ length: chapterCount }, (_, i) => i + 1)
+    .map(n => `<button class="chapter-grid-btn" onclick="selectBibleChapterFromGrid('${bookId}', ${n})">${n}</button>`)
+    .join('');
+
+  document.getElementById('bible-book-list-view').style.display = 'none';
+  document.getElementById('bible-chapter-grid-view').style.display = 'block';
+}
+
+function showBibleBookListInAccordion() {
+  document.getElementById('bible-chapter-grid-view').style.display = 'none';
+  document.getElementById('bible-book-list-view').style.display = 'grid';
+}
+
+/** Actually navigate to the tapped book+chapter and close the sidenav. */
+function selectBibleChapterFromGrid(bookId, chapter) {
   closeSidenav();
   const bookSel = document.getElementById('bible-book-select');
   if (bookSel) bookSel.value = bookId;
-  onBibleBookChange();
+  populateBibleChapters(bookId);
+  const chapterSel = document.getElementById('bible-chapter-select');
+  if (chapterSel) chapterSel.value = chapter;
+  onBibleChapterChange();
   showView('bible');
 }
 
